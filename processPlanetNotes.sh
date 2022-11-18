@@ -16,6 +16,8 @@
 #   zones.
 # * Runs the function against all notes.
 #
+# The design of this architecture is at: https://miro.com/app/board/uXjVPDTbDok=/
+#
 # If the download fails with "Too many requests", you can check this page:
 # http://overpass-api.de/api/status and increase the sleep time between loops.
 #
@@ -74,7 +76,7 @@
 # order by area, ITER desc;
 #
 # Author: Andres Gomez (AngocA)
-# Version: 2022-11-12
+# Version: 2022-11-18
 
 set -xv
 set -euo pipefail
@@ -92,6 +94,7 @@ OUTPUT_NOTE_COMMENTS_FILE=output-note_comments.csv
 PLANET_NOTES_FILE=planet-notes-latest.osn
 SAXON_JAR=${SAXON_CLASSPATH:-.}/saxon-he-11.4.jar
 SECONDS_TO_WAIT=5
+LOOP_SIZE=10000
 MAX_NOTE_ID=3500000
 BASE_LOAD=${1:-}
 
@@ -199,12 +202,12 @@ function createBaseTables {
    );
  
   CREATE TABLE notes (
-   note_id INTEGER NOT NULL,
+   note_id INTEGER NOT NULL, -- id
    latitude DECIMAL NOT NULL,
    longitude DECIMAL NOT NULL,
    created_at TIMESTAMP NOT NULL,
-   closed_at TIMESTAMP,
    status note_status_enum,
+   closed_at TIMESTAMP,
    id_country INTEGER
   );
  
@@ -214,12 +217,17 @@ function createBaseTables {
  
   CREATE TABLE note_comments (
    note_id INTEGER NOT NULL,
-   event note_event_enum NOT NULL,
    created_at TIMESTAMP NOT NULL,
    user_id INTEGER,
+   event note_event_enum NOT NULL,
    username VARCHAR(256)
   );
  
+  -- ToDo primary key duplicated error.
+  --ALTER TABLE note_comments
+  -- ADD CONSTRAINT pk_note_comments
+  -- PRIMARY KEY (note_id, event, created_at);
+
   ALTER TABLE note_comments
    ADD CONSTRAINT fk_notes
    FOREIGN KEY (note_id)
@@ -267,7 +275,7 @@ EOF
 }
 
 function processCountries {
- echo "DELETE FROM countries" | psql -d ${DBNAME} -v ON_ERROR_STOP=1 
+ echo "DELETE FROM countries" | psql -d "${DBNAME}" -v ON_ERROR_STOP=1 
 
  # Extracts ids of all country relations into a JSON.
  echo "Obtaining the countries ids."
@@ -284,7 +292,7 @@ EOF
    "https://overpass-api.de/api/interpreter"
  RET=${?}
  set -e
- if [ ${RET} -ne 0 ] ; then
+ if [ "${RET}" -ne 0 ] ; then
   echo "ERROR: Country list could not be downloaded."
   exit 1
  fi
@@ -334,7 +342,7 @@ EOF
   if [ "${ID}" -ne 16239 ] ; then
    STATEMENT="INSERT INTO countries (country_id, country_name, country_name_es, 
      country_name_en, geom) select ${ID}, '${COUNTRY}', '${COUNTRY_ES}', 
-     '${COUNTRY_EN}', ST_Union(wkb_geometry) 
+     '${COUNTRY_EN}', ST_Union(ST_makeValid(wkb_geometry)) 
      from import group by 1"
   else # This case is for Austria.
    # GEOSUnaryUnion: TopologyException: Input geom 1 is invalid: 
@@ -351,14 +359,14 @@ EOF
    rm -f "${ID}.json" "${ID}.geojson"
   fi
   echo "Waiting ${SECONDS_TO_WAIT} seconds..."
-  sleep ${SECONDS_TO_WAIT}
+  sleep "${SECONDS_TO_WAIT}"
  done < "${COUNTRIES_FILE}"
 }
 
 function processMaritimes {
  # Extracts ids of all EEZ relations into a JSON.
  echo "Obtaining the eez ids."
- cat << EOF > ${QUERY_FILE}
+ cat << EOF > "${QUERY_FILE}"
   [out:csv(::id)];
   (
     relation["border_type"]["border_type"~"contiguous|eez"];
@@ -371,7 +379,7 @@ EOF
    "https://overpass-api.de/api/interpreter"
  RET=${?}
  set -e
- if [ ${RET} -ne 0 ] ; then
+ if [ "${RET}" -ne 0 ] ; then
   echo "ERROR: Maritimes border list could not be downloaded."
   exit 1
  fi
@@ -418,7 +426,7 @@ EOF
    rm -f "${ID}.json" "${ID}.geojson"
   fi
   echo "Waiting ${SECONDS_TO_WAIT} seconds..."
-  sleep ${SECONDS_TO_WAIT}
+  sleep "${SECONDS_TO_WAIT}"
  done < "${MARITIMES_FILE}"
 }
 
@@ -433,7 +441,7 @@ function downloadPlanetNotes {
  # Download Planet notes.
  echo "Retrieving Planet notes file... $(date)"
  curl --output planet-notes-latest.osn.bz2 \
-   https://planet.openstreetmap.org/notes/${PLANET_NOTES_FILE}.bz2
+   "https://planet.openstreetmap.org/notes/${PLANET_NOTES_FILE}.bz2"
  
  echo "Extracting Planet notes..."
  bzip2 -d "${PLANET_NOTES_FILE}.bz2"
@@ -444,42 +452,43 @@ function convertPlanetNotesToFlatFile {
  # Process the notes file.
  # XSLT transformations.
  cat << EOF > "${XSLT_NOTES_FILE}"
- <?xml version="1.0" encoding="UTF-8"?>
- <xsl:stylesheet version="1.0"
- xmlns:xsl="http://www.w3.org/1999/XSL/Transform">
- <xsl:output method="text" />
-  <xsl:template match="/">
-   <xsl:for-each select="osm-notes/note"><xsl:value-of select="@id"/>,<xsl:value-of select="@lat"/>,<xsl:value-of select="@lon"/>,"<xsl:value-of select="@created_at"/>",<xsl:choose><xsl:when test="@closed_at != ''">"<xsl:value-of select="@closed_at"/>","close"
- </xsl:when><xsl:otherwise>,"open"<xsl:text>
- </xsl:text></xsl:otherwise></xsl:choose>
-   </xsl:for-each>
-  </xsl:template>
- </xsl:stylesheet>
+<?xml version="1.0" encoding="UTF-8"?>
+<xsl:stylesheet version="1.0"
+xmlns:xsl="http://www.w3.org/1999/XSL/Transform">
+<xsl:output method="text" />
+<xsl:template match="/">
+ <xsl:for-each select="osm-notes/note"><xsl:value-of select="@id"/>,<xsl:value-of select="@lat"/>,<xsl:value-of select="@lon"/>,"<xsl:value-of select="@created_at"/>",<xsl:choose><xsl:when test="@closed_at != ''">"<xsl:value-of select="@closed_at"/>","close"
+</xsl:when><xsl:otherwise>,"open"<xsl:text>
+</xsl:text></xsl:otherwise></xsl:choose>
+ </xsl:for-each>
+</xsl:template>
+</xsl:stylesheet>
 EOF
 
+# ToDo No esta cargando el nombre de usuario
  cat << EOF > "${XSLT_NOTE_COMMENTS_FILE}"
- <?xml version="1.0" encoding="UTF-8"?>
- <xsl:stylesheet version="1.0"
- xmlns:xsl="http://www.w3.org/1999/XSL/Transform">
- <xsl:output method="text" />
-  <xsl:template match="/">
-   <xsl:for-each select="osm-notes/note">
-   <xsl:variable name="note_id"><xsl:value-of select="@id"/></xsl:variable>
-    <xsl:for-each select="comment">
- <xsl:choose> <xsl:when test="@uid != ''"> <xsl:copy-of select="\$note_id" />,"<xsl:value-of select="@action" />","<xsl:value-of select="@timestamp"/>",<xsl:value-of select="@uid"/>,"<xsl:value-of select="@username"/>"<xsl:text>
- </xsl:text></xsl:when><xsl:otherwise>
-  <xsl:copy-of select="\$note_id" />,"<xsl:value-of select="@action" />","<xsl:value-of select="@timestamp"/>",,<xsl:text>
- </xsl:text></xsl:otherwise> </xsl:choose>
-    </xsl:for-each>
-   </xsl:for-each>
-  </xsl:template>
- </xsl:stylesheet>
+<?xml version="1.0" encoding="UTF-8"?>
+<xsl:stylesheet version="1.0"
+xmlns:xsl="http://www.w3.org/1999/XSL/Transform">
+<xsl:output method="text" />
+<xsl:template match="/">
+ <xsl:for-each select="osm-notes/note">
+ <xsl:variable name="note_id"><xsl:value-of select="@id"/></xsl:variable>
+  <xsl:for-each select="comment">
+<xsl:choose> <xsl:when test="@uid != ''"> <xsl:copy-of select="\$note_id" />,"<xsl:value-of select="@action" />","<xsl:value-of select="@timestamp"/>",<xsl:value-of select="@uid"/>,"<xsl:value-of select="@username"/>"<xsl:text>
+</xsl:text></xsl:when><xsl:otherwise>
+<xsl:copy-of select="\$note_id" />,"<xsl:value-of select="@action" />","<xsl:value-of select="@timestamp"/>",,<xsl:text>
+</xsl:text></xsl:otherwise> </xsl:choose>
+  </xsl:for-each>
+ </xsl:for-each>
+</xsl:template>
+</xsl:stylesheet>
 EOF
 
  # Converts the XML into a flat file in CSV format.
  java -Xmx6000m -cp "${SAXON_JAR}" net.sf.saxon.Transform \
-   -s:"${PLANET_NOTES_FILE}.xml" -xsl:${XSLT_NOTES_FILE} -o:"${OUTPUT_NOTES_FILE}"
- java -Xmx5000m -cp "${SAXON_JAR}" net.sf.saxon.Transform \
+   -s:"${PLANET_NOTES_FILE}.xml" -xsl:"${XSLT_NOTES_FILE}" -o:"${OUTPUT_NOTES_FILE}"
+ java -Xmx6000m -cp "${SAXON_JAR}" net.sf.saxon.Transform \
    -s:"${PLANET_NOTES_FILE}.xml" -xsl:"${XSLT_NOTE_COMMENTS_FILE}" \
   -o:"${OUTPUT_NOTE_COMMENTS_FILE}"
 }
@@ -488,8 +497,9 @@ function loadBaseNotes {
  # Loads the data in the database.
  # Adds a column to include the country where it belongs.
  psql -d "${DBNAME}" -v ON_ERROR_STOP=1 << EOF
-  copy notes from '$(pwd)/${OUTPUT_NOTES_FILE}' csv;
-  copy note_comments from '$(pwd)/${OUTPUT_NOTE_COMMENTS_FILE}' csv;
+  COPY notes (note_id, latitude, longitude, created_at, closed_at, status)
+    FROM '$(pwd)/${OUTPUT_NOTES_FILE}' csv;
+  COPY note_comments FROM '$(pwd)/${OUTPUT_NOTE_COMMENTS_FILE}' csv;
 EOF
 }
 
@@ -502,10 +512,207 @@ function loadSyncNotes {
 EOF
 }
 
+function createsFunctionToGetCountry {
+ # Creates a function that performs a basic triage according to its longitude:
+ # * -180 - -30: Americas.
+ # * -30 - 25: West Europe and West Africa.
+ # * 25 - 65: Middle East, East Africa and Russia.
+ # * 65 - 180: Southeast Asia and Oceania.
+ psql -d "${DBNAME}" -v ON_ERROR_STOP=1 << EOF
+ CREATE OR REPLACE FUNCTION get_country (
+   lon DECIMAL,
+   lat DECIMAL,
+   id_note INTEGER
+ ) RETURNS INTEGER
+ LANGUAGE plpgsql
+ AS \$func\$
+  DECLARE
+   id_country INTEGER;
+   f RECORD;
+   contains BOOLEAN;
+   iter INTEGER;
+   area VARCHAR(20);
+  BEGIN
+   id_country := -1;
+   iter := 1;
+   IF (-5 < lat AND lat < 5 AND 4 > lon AND lon > -4) THEN
+    area := 'Null Island';
+   ELSIF (lon < -30) THEN -- Americas
+    area := 'Americas';
+    FOR f IN
+      SELECT geom, country_id
+      FROM countries
+      ORDER BY americas NULLS LAST
+     LOOP
+      contains := ST_Contains(f.geom, ST_SetSRID(ST_Point(lon, lat), 4326));
+      IF (contains) THEN
+       id_country := f.country_id;
+       EXIT;
+      END IF;
+      iter := iter + 1;
+     END LOOP;
+   ELSIF (lon < 25) THEN -- Europe & part of Africa
+    area := 'Europe/Africa';
+    FOR f IN
+      SELECT geom, country_id
+      FROM countries
+      ORDER BY europe NULLS LAST
+     LOOP
+      contains := ST_Contains(f.geom, ST_SetSRID(ST_Point(lon, lat), 4326));
+      IF (contains) THEN
+       id_country := f.country_id;
+       EXIT;
+      END IF;
+      iter := iter + 1;
+     END LOOP;
+   ELSIF (lon < 65) THEN -- Russia, Middle East & part of Africa
+    area := 'Russia/Middle east';
+    FOR f IN
+      SELECT geom, country_id
+      FROM countries
+      ORDER BY russia_middle_east NULLS LAST
+     LOOP
+      contains := ST_Contains(f.geom, ST_SetSRID(ST_Point(lon, lat), 4326));
+      IF (contains) THEN
+       id_country := f.country_id;
+       EXIT;
+      END IF;
+      iter := iter + 1;
+     END LOOP;
+   ELSE
+    area := 'Asia/Oceania';
+    FOR f IN
+      SELECT geom, country_id
+      FROM countries
+      ORDER BY asia_oceania NULLS LAST
+     LOOP
+      contains := ST_Contains(f.geom, ST_SetSRID(ST_Point(lon, lat), 4326));
+      IF (contains) THEN
+       id_country := f.country_id;
+       EXIT;
+      END IF;
+      iter := iter + 1;
+     END LOOP;
+   END IF;
+   INSERT INTO tries VALUES (area, iter, id_note, id_country);
+   RETURN id_country;
+  END
+ \$func\$
+EOF
+} 
+
+function createsProcedureInsertNote {
+ # Creates a procedure that inserts a note.
+ psql -d "${DBNAME}" -v ON_ERROR_STOP=1 << EOF
+ CREATE OR REPLACE PROCEDURE insert_note (
+   m_note_id INTEGER,
+   m_latitude DECIMAL,
+   m_longitude DECIMAL,
+   m_created_at TIMESTAMP,
+   m_closed_at TIMESTAMP,
+   m_status note_status_enum,
+   m_id_country INTEGER
+ )
+ LANGUAGE plpgsql
+ AS \$proc\$
+  DECLARE
+   id_country INTEGER;
+  BEGIN
+   id_country := get_country(r.longitude, r.latitude);
+   INSERT INTO notes (
+   note_id,
+   latitude,
+   longitude,
+   created_at,
+   closed_at,
+   status,
+   id_country
+  ) VALUES (
+   m_note_id,
+   m_latitude,
+   m_longitude,
+   m_created_at,
+   m_closed_at,
+   m_status,
+   m_id_country
+  );
+  END
+ \$proc\$
+EOF
+} 
+
+function createsProcedureInsertNoteComment {
+ # Creates a procedure that inserts a note comment.
+ psql -d "${DBNAME}" -v ON_ERROR_STOP=1 << EOF
+ CREATE OR REPLACE PROCEDURE insert_note_comment (
+   m_note_id INTEGER,
+   m_event note_event_enum,
+   m_created_at TIMESTAMP,
+   m_user_id INTEGER,
+   m_username VARCHAR(256)
+ )
+ LANGUAGE plpgsql
+ AS \$proc\$
+  BEGIN
+   INSERT INTO note_comments (
+   note_id,
+   event,
+   created_at,
+   user_id,
+   username
+  ) VALUES (
+   m_note_id,
+   m_event,
+   m_created_at,
+   m_user_id,
+   m_username,
+  );
+  IF (m_event = 'closed') THEN
+   UPDATE notes
+     SET status = 'close',
+     closed_at = m_created_at
+     WHERE note_id = m_note_id;
+  ELSIF (m_event = 'reopened') THEN
+   UPDATE notes
+     SET status = 'open',
+     closed_at = NULL
+     WHERE note_id = m_note_id;
+  END IF;
+  END
+ \$proc\$
+EOF
+} 
 function removeDuplicates {
  psql -d "${DBNAME}" -v ON_ERROR_STOP=1 << EOF
-  DELETE FROM notes_sync WHERE note_id IN (SELECT note_id FROM notes);
-  INSERT INTO notes SELECT * FROM notes_sync;
+  DELETE FROM notes_sync
+    WHERE note_id IN (SELECT note_id FROM notes);
+  DO \$\$DECLARE
+   r RECORD;
+  FOR r IN
+    SELECT note_id, latitude, longitude, created_at, closed_at, status
+    FROM notes_sync;
+    LOOP
+     EXECUTE 'CALL insert_note (r.note_id, r.latitude, r.longitude, '
+       || 'r.created_at, r.closed_at, r.status, id_country)';
+    END LOOP;
+  END\$\$;
+
+  -- ToDo procedures are missing
+  DELETE FROM note_comments_sync
+    WHERE (note_id, event, created_at) IN
+      (SELECT note_id, event, created_at FROM notes);
+
+  DO \$\$DECLARE r RECORD;
+  FOR r IN
+    SELECT note_id, event, created_at, user_id, username
+    FROM note_comments_sync
+    LOOP
+     EXECUTE 'CALL insert_note_comment (r.note_id, r.event, r.created_at, '
+       || 'r.user_id, r.username);';
+    END LOOP;
+  END\$\$;
+
+BEGIN
 EOF
 }
 
@@ -673,101 +880,13 @@ EOF
 EOF
 }
 
-function createsFunctionToGetCountry {
- # Creates a function that performs a basic triage according to its longitude:
- # * -180 - -30: Americas.
- # * -30 - 25: West Europe and West Africa.
- # * 25 - 65: Middle East, East Africa and Russia.
- # * 65 - 180: Southeast Asia and Oceania.
- psql -d "${DBNAME}" -v ON_ERROR_STOP=1 << EOF
- CREATE OR REPLACE FUNCTION get_country (
-   lon DECIMAL,
-   lat DECIMAL,
-   id_note INTEGER
- ) RETURNS INTEGER
- LANGUAGE plpgsql
- AS \$func\$
-  DECLARE
-   id_country INTEGER;
-   f RECORD;
-   contains BOOLEAN;
-   iter INTEGER;
-   area VARCHAR(20);
-  BEGIN
-   id_country := -1;
-   iter := 1;
-   IF (-5 < lat AND lat < 5 AND 4 > lon AND lon > -4) THEN
-    area := 'Null Island';
-   ELSIF (lon < -30) THEN -- Americas
-    area := 'Americas';
-    FOR f IN
-      SELECT geom, country_id
-      FROM countries
-      ORDER BY americas NULLS LAST
-     LOOP
-      contains := ST_Contains(f.geom, ST_SetSRID(ST_Point(lon, lat), 4326));
-      IF (contains) THEN
-       id_country := f.country_id;
-       EXIT;
-      END IF;
-      iter := iter + 1;
-     END LOOP;
-   ELSIF (lon < 25) THEN -- Europe & part of Africa
-    area := 'Europe/Africa';
-    FOR f IN
-      SELECT geom, country_id
-      FROM countries
-      ORDER BY europe NULLS LAST
-     LOOP
-      contains := ST_Contains(f.geom, ST_SetSRID(ST_Point(lon, lat), 4326));
-      IF (contains) THEN
-       id_country := f.country_id;
-       EXIT;
-      END IF;
-      iter := iter + 1;
-     END LOOP;
-   ELSIF (lon < 65) THEN -- Russia, Middle East & part of Africa
-    area := 'Russia/Middle east';
-    FOR f IN
-      SELECT geom, country_id
-      FROM countries
-      ORDER BY russia_middle_east NULLS LAST
-     LOOP
-      contains := ST_Contains(f.geom, ST_SetSRID(ST_Point(lon, lat), 4326));
-      IF (contains) THEN
-       id_country := f.country_id;
-       EXIT;
-      END IF;
-      iter := iter + 1;
-     END LOOP;
-   ELSE
-    area := 'Asia/Oceania';
-    FOR f IN
-      SELECT geom, country_id
-      FROM countries
-      ORDER BY asia_oceania NULLS LAST
-     LOOP
-      contains := ST_Contains(f.geom, ST_SetSRID(ST_Point(lon, lat), 4326));
-      IF (contains) THEN
-       id_country := f.country_id;
-       EXIT;
-      END IF;
-      iter := iter + 1;
-     END LOOP;
-   END IF;
-   INSERT INTO tries VALUES (area, iter, id_note, id_country);
-   RETURN id_country;
-  END
- \$func\$
-EOF
-} 
-
+# ToDo Parallelize.
 function getLocationNotes {
- for i in $(seq 0 1000 ${MAX_NOTE_ID}) ; do
+ for i in $(seq -f %1.0f ${LOOP_SIZE} ${LOOP_SIZE} "${MAX_NOTE_ID}") ; do
   echo "${i} $(date)"
   echo "UPDATE notes
     SET id_country = get_country(longitude, latitude, note_id)
-    WHERE note_id <= ${i}
+    WHERE $((i - LOOP_SIZE)) <= note_id AND note_id <= ${i}
     AND id_country IS NULL" | psql -d "${DBNAME}" -v ON_ERROR_STOP=1 
  done
 }
@@ -788,6 +907,7 @@ checkPrereqs
  cleanPartial
  downloadPlanetNotes
  convertPlanetNotesToFlatFile
+ createsFunctionToGetCountry
  if [ "${BASE_LOAD}" == "--base" ] ; then
   loadBaseNotes
  else
@@ -797,7 +917,6 @@ checkPrereqs
  fi
  cleanNotesFiles
  organizeAreas
- createsFunctionToGetCountry
  getLocationNotes
  echo "$(date) Ending process"
 } >> "${LOG_FILE}" 2>&1
