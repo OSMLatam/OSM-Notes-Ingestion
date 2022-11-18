@@ -96,11 +96,14 @@ SAXON_JAR=${SAXON_CLASSPATH:-.}/saxon-he-11.4.jar
 SECONDS_TO_WAIT=5
 LOOP_SIZE=10000
 MAX_NOTE_ID=3500000
-BASE_LOAD=${1:-}
+PROCESS_TYPE=${1:-}
 
 function checkPrereqs {
- if [ "${BASE_LOAD}" != "" ] && [ "${BASE_LOAD}" != "--base" ]  ; then
-  echo "ERROR: Invalid parameter. It should be empty or --base."
+ if [ "${PROCESS_TYPE}" != "" ] && [ "${PROCESS_TYPE}" != "--base" ]  ; then
+  echo "ERROR: Invalid parameter. It should be:"
+  echo " * Empty string, nothing."
+  echo " * --base"
+  echo " * --boundaries"
   exit 2
  fi
  set +e
@@ -255,10 +258,6 @@ function createSyncTables {
    id_country INTEGER
   );
  
-  ALTER TABLE notes_sync
-   ADD CONSTRAINT pk_notes_sync
-   PRIMARY KEY (note_id);
- 
   CREATE TABLE note_comments_sync (
    note_id INTEGER NOT NULL,
    event note_event_enum NOT NULL,
@@ -266,11 +265,6 @@ function createSyncTables {
    user_id INTEGER,
    username VARCHAR(256)
   );
- 
-  ALTER TABLE note_comments_sync
-   ADD CONSTRAINT fk_notes_sync
-   FOREIGN KEY (note_id)
-   REFERENCES notes (note_id);
 EOF
 }
 
@@ -465,7 +459,6 @@ xmlns:xsl="http://www.w3.org/1999/XSL/Transform">
 </xsl:stylesheet>
 EOF
 
-# ToDo No esta cargando el nombre de usuario
  cat << EOF > "${XSLT_NOTE_COMMENTS_FILE}"
 <?xml version="1.0" encoding="UTF-8"?>
 <xsl:stylesheet version="1.0"
@@ -499,7 +492,8 @@ function loadBaseNotes {
  psql -d "${DBNAME}" -v ON_ERROR_STOP=1 << EOF
   COPY notes (note_id, latitude, longitude, created_at, closed_at, status)
     FROM '$(pwd)/${OUTPUT_NOTES_FILE}' csv;
-  COPY note_comments FROM '$(pwd)/${OUTPUT_NOTE_COMMENTS_FILE}' csv DELIMITER ',' QUOTE '''';
+  COPY note_comments FROM '$(pwd)/${OUTPUT_NOTE_COMMENTS_FILE}' csv
+    DELIMITER ',' QUOTE '''';
 EOF
 }
 
@@ -507,8 +501,12 @@ function loadSyncNotes {
  # Loads the data in the database.
  # Adds a column to include the country where it belongs.
  psql -d "${DBNAME}" -v ON_ERROR_STOP=1 << EOF
-  copy notes_sync from '$(pwd)/${OUTPUT_NOTES_FILE}' csv;
-  copy note_comments_sync from '$(pwd)/${OUTPUT_NOTE_COMMENTS_FILE}' csv;
+  DELETE FROM notes_sync;
+  COPY notes_sync (note_id, latitude, longitude, created_at, closed_at, status)
+    FROM '$(pwd)/${OUTPUT_NOTES_FILE}' csv;
+  DELETE FROM note_comments_sync;
+  COPY note_comments_sync FROM '$(pwd)/${OUTPUT_NOTE_COMMENTS_FILE}' csv
+    DELIMITER ',' QUOTE '''';
 EOF
 }
 
@@ -601,7 +599,7 @@ function createsFunctionToGetCountry {
 EOF
 } 
 
-function createsProcedureInsertNote {
+function createsProcedures {
  # Creates a procedure that inserts a note.
  psql -d "${DBNAME}" -v ON_ERROR_STOP=1 << EOF
  CREATE OR REPLACE PROCEDURE insert_note (
@@ -610,15 +608,14 @@ function createsProcedureInsertNote {
    m_longitude DECIMAL,
    m_created_at TIMESTAMP,
    m_closed_at TIMESTAMP,
-   m_status note_status_enum,
-   m_id_country INTEGER
+   m_status note_status_enum
  )
  LANGUAGE plpgsql
  AS \$proc\$
   DECLARE
    id_country INTEGER;
   BEGIN
-   id_country := get_country(r.longitude, r.latitude);
+   id_country := get_country(m_longitude, m_latitude, m_note_id);
    INSERT INTO notes (
    note_id,
    latitude,
@@ -634,14 +631,12 @@ function createsProcedureInsertNote {
    m_created_at,
    m_closed_at,
    m_status,
-   m_id_country
+   id_country
   );
-  END
+ END
  \$proc\$
 EOF
-} 
 
-function createsProcedureInsertNoteComment {
  # Creates a procedure that inserts a note comment.
  psql -d "${DBNAME}" -v ON_ERROR_STOP=1 << EOF
  CREATE OR REPLACE PROCEDURE insert_note_comment (
@@ -665,7 +660,7 @@ function createsProcedureInsertNoteComment {
    m_event,
    m_created_at,
    m_user_id,
-   m_username,
+   m_username
   );
   IF (m_event = 'closed') THEN
    UPDATE notes
@@ -678,39 +673,60 @@ function createsProcedureInsertNoteComment {
      closed_at = NULL
      WHERE note_id = m_note_id;
   END IF;
-  END
+ END
  \$proc\$
 EOF
-} 
+}
+
 function removeDuplicates {
  psql -d "${DBNAME}" -v ON_ERROR_STOP=1 << EOF
   DELETE FROM notes_sync
     WHERE note_id IN (SELECT note_id FROM notes);
-  DO \$\$DECLARE
+  DO
+  \$\$
+  DECLARE
    r RECORD;
-  FOR r IN
+   closed_time VARCHAR(100);
+  BEGIN
+   FOR r IN
     SELECT note_id, latitude, longitude, created_at, closed_at, status
-    FROM notes_sync;
-    LOOP
-     EXECUTE 'CALL insert_note (r.note_id, r.latitude, r.longitude, '
-       || 'r.created_at, r.closed_at, r.status, id_country)';
-    END LOOP;
-  END\$\$;
+    FROM notes_sync
+   LOOP
+    closed_time := 'TO_DATE(''' || r.closed_at
+      || ''', ''YYYY-MM-DD HH24:MI:SS'')';
+    EXECUTE 'CALL insert_note (' || r.note_id || ', ' || r.latitude || ', '
+      || r.longitude || ', ' 
+      || 'TO_DATE(''' || r.created_at || ''', ''YYYY-MM-DD HH24:MI:SS''), '
+      || COALESCE (closed_time, 'NULL') || ','
+      || '''' || r.status || '''::note_status_enum)';
+   END LOOP;
+  END;
+  \$\$;
 
-  -- ToDo procedures are missing
   DELETE FROM note_comments_sync
     WHERE (note_id, event, created_at) IN
-      (SELECT note_id, event, created_at FROM notes);
+      (SELECT note_id, event, created_at FROM note_comments);
 
-  DO \$\$DECLARE r RECORD;
-  FOR r IN
+  DO
+  \$\$
+  DECLARE
+   r RECORD;
+   created_time VARCHAR(100);
+  BEGIN
+   FOR r IN
     SELECT note_id, event, created_at, user_id, username
     FROM note_comments_sync
-    LOOP
-     EXECUTE 'CALL insert_note_comment (r.note_id, r.event, r.created_at, '
-       || 'r.user_id, r.username);';
-    END LOOP;
-  END\$\$;
+   LOOP
+    created_time := 'TO_DATE(''' || r.created_at
+      || ''', ''YYYY-MM-DD HH24:MI:SS'')';
+    EXECUTE 'CALL insert_note_comment (' || r.note_id || ', '
+      || '''' || r.event || '''::note_event_enum, '
+      || COALESCE (created_time, 'NULL') || ', ' 
+      || COALESCE (r.user_id || '', 'NULL') || ', '
+      || COALESCE ('''' || r.username || '''', 'NULL') || ')';
+   END LOOP;
+  END
+  \$\$;
 
 BEGIN
 EOF
@@ -894,7 +910,7 @@ function getLocationNotes {
 checkPrereqs
 {
  echo "$(date) Starting process"
- if [ "${BASE_LOAD}" == "--base" ] ; then
+ if [ "${PROCESS_TYPE}" == "--base" ] ; then
   dropSyncTables
   dropBaseTables
   createBaseTables
@@ -902,13 +918,21 @@ checkPrereqs
   dropSyncTables
   createSyncTables
  fi
- processCountries
- processMaritimes
- cleanPartial
+ if [ "${PROCESS_TYPE}" == "--base" ] \
+   || [ "${PROCESS_TYPE}" == "--boundaries" ] ; then
+  processCountries
+  processMaritimes
+  cleanPartial
+  if [ "${PROCESS_TYPE}" == "--boundaries" ] ; then
+   echo "$(date) Ending process"
+   exit
+  fi
+ fi
  downloadPlanetNotes
  convertPlanetNotesToFlatFile
  createsFunctionToGetCountry
- if [ "${BASE_LOAD}" == "--base" ] ; then
+ createsProcedures
+ if [ "${PROCESS_TYPE}" == "--base" ] ; then
   loadBaseNotes
  else
   loadSyncNotes
