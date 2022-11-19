@@ -1,6 +1,7 @@
 #!/bin/bash
 
-# This script prepares a database for note analysis.
+# This script prepares a database for note analysis, and loads the notes from
+# the planet, completely or the missing ones.
 # The script structure is:
 # * Creates the database structure.
 # * Downloads the list of country ids (overpass).
@@ -20,19 +21,25 @@
 #
 # If the download fails with "Too many requests", you can check this page:
 # http://overpass-api.de/api/status and increase the sleep time between loops.
+# There is a variable for this: SECONDS_TO_WAIT.
 #
 # Known errors:
 # * Austria has an issue to be imported with ogr2ogr for a particular thing in
-#   the geometry. A simplification is done to upload it.
+#   the geometry. A simplification is done to upload it. However, there is a
+#   missing part not being imported.
 # * Taiwan has an issue to be imported with ogr2ogr for a very long row. Some
 #   fields are removed.
 # * The Gaza Strip is not at the same level as a country. The ID is hardcoded.
+# * Not all countries have defined the maritimes borders. Also, not all
+#   countries have signed the Covemar.
 #
-# The following files are for tests or prepare the environment.
-# setopt interactivecomments
+# The following files are necessary to prepare the environment.
 # https://github.com/tyrasd/osmtogeojson
 # npm install -g osmtogeojson
 # https://sourceforge.net/projects/saxon/files/Saxon-HE/11/Java/SaxonHE11-4J.zip/download
+#
+# When running under MacOS or zsh:
+# setopt interactivecomments
 #
 # You need to create a database called 'notes':
 #   CREATE DATABASE notes;
@@ -50,9 +57,9 @@
 # Also you need to give permissions to create objects in public schema:
 #   GRANT USAGE ON SCHEMA public TO myuser
 #
-# To specify the Saxon location, you can do something like; otherwise, it will
-# the current location:
-#  export SAXON_CLASSPATH=~/saxon/
+# To specify the Saxon location, you can put this file in the same directory as
+# saxon ; otherwise, it will this location:
+#   export SAXON_CLASSPATH=~/saxon/
 #
 # Some interesting queries to track the process:
 #
@@ -61,29 +68,39 @@
 # order by americas nulls last, europe nulls last,
 #  russia_middle_east nulls last, asia_oceania nulls last;
 #
+# The most iterations to find an area.
 # select iter, area, count(1)
 # from tries
 # group by iter, area 
 # order by ITER desc;
 #
+# Details of the iteration.
 # select t.*, country_name_en
 # from tries t join countries c on (t.id_country = c.country_id)
 # where iter = 121;
 #
-# select iter, area, count(1), country_name_en
-# from tries t join countries c on (t.id_country = c.country_id)
-# group by iter, area, country_name_en
-# order by area, ITER desc;
+# How many iterations per region to find the appropriate area.
+# This allows to reorganize the updates of the organizeAreas function.
+# select iter, count(1), area, country_name_en
+# from tries t join countries c
+# on t.id_country = c.country_id
+# group by iter, area, country_name_en 
+# order by area, count(1) desc
+#
+# This is the list of error codes:
+# 1) Library or utility missing.
+# 2) Invalid argument.
+# 3) Id list cannot be downloaded, for boundary geometries.
 #
 # Author: Andres Gomez (AngocA)
 # Version: 2022-11-18
 
-set -xv
+#set -xv
 set -euo pipefail
 CLEAN=true
 
 DBNAME=notes
-LOG_FILE=processPlanetNotes.log
+LOG_FILE=${0%.sh}.log
 COUNTRIES_FILE=countries
 MARITIMES_FILE=maritimes
 QUERY_FILE=query
@@ -294,7 +311,7 @@ EOF
  set -e
  if [ "${RET}" -ne 0 ] ; then
   echo "ERROR: Country list could not be downloaded."
-  exit 1
+  exit 3
  fi
  
  tail -n +2 "${COUNTRIES_FILE}" > "${COUNTRIES_FILE}.tmp"
@@ -381,7 +398,7 @@ EOF
  set -e
  if [ "${RET}" -ne 0 ] ; then
   echo "ERROR: Maritimes border list could not be downloaded."
-  exit 1
+  exit 3
  fi
  
  tail -n +2 "${MARITIMES_FILE}" > "${MARITIMES_FILE}.tmp"
@@ -770,24 +787,31 @@ function organizeAreas {
     'Haiti');
   -- More than 2K
   UPDATE countries SET americas = 6 WHERE country_name_en IN ('Costa Rica',
-    'Guatemala', 'Dominican Republic', 'Uruguay', 'Paraguay');
+    'Guatemala', 'France', 'Dominican Republic', 'Uruguay', 'Paraguay');
   -- More than 1K
   UPDATE countries SET americas = 7 WHERE country_name_en IN (
-    'Trinidad and Tobago', 'Panama', 'Puerto Rico', 'Honduras', 'El Salvador');
+    'Trinidad and Tobago', 'Panama', 'Honduras', 'El Salvador', 'Netherlands');
   -- Less than 1K
-  UPDATE countries SET americas = 8 WHERE country_name_en IN ('Greenland',
-    'Portugal', 'Netherlands', 'British Overseas Territories',
-    'French Polynesia', 'French Guiana', 'Aruba', 'France', 'New Zealand',
-    'Russia');
+  UPDATE countries SET americas = 8 WHERE country_name_en IN ('Jamaica');
   -- Less than 500
-  UPDATE countries SET americas = 9 WHERE country_name_en IN ('Tonga',
-    'Falkland Islands', 'Cayman Islands', 'Anguilla',
-    'South Georgia and the South Sandwich Islands', 'Samoa', 'Dominica',
-    'Belize', 'Guyana', 'Suriname', 'British Virgin Islands', 'Cook Islands',
-    'Pitcairn Islands', 'Bermuda', 'Fiji', 'Kiribati', 'Jamaica', 'Saint Lucia',
-    'Grenada', 'Saint Vincent and the Grenadines', 'Barbados',
-    'Turks and Caicos Islands', 'Niue', 'The Bahamas', 'Saint Kitts and Nevis',
-    'Montserrat', 'Antigua and Barbuda');
+  UPDATE countries SET americas = 9 WHERE country_name_en IN ('Greenland',
+    'Suriname', 'Guyana', 'Belize', 'The Bahamas', 'Falkland Islands',
+    'Saint Lucia', 'Barbados', 'Saint Vincent and the Grenadines', 'Tonga',
+    'Cook Islands', 'Dominica', 'Grenada', 'Samoa', 'Bermuda',
+    'Cayman Islands', 'Turks and Caicos Islands',
+    'South Georgia and the South Sandwich Islands', 'Saint Kitts and Nevis',
+    'Antigua and Barbuda', 'Russia', 'Portugal', 'British Virgin Islands', 
+    'New Zealand', 'Anguilla', 'Fiji', 'Pitcairn Islands', 'Montserrat',
+    'Kiribati', 'Niue', 'British Overseas Territories', 'French Polynesia',
+    'French Guiana', 'Aruba'
+    );
+  -- Maritimes areas
+  UPDATE countries SET americas = 10 WHERE country_name_en IN ('Brazil (EEZ)',
+    'Chile (EEZ)', 'Brazil (Contiguous Zone)', 'United States (EEZ)',
+    'Colombia (EEZ)', 'Ecuador (EEZ)', 'Argentina (EEZ)', 'Guadeloupe (EEZ)',
+    'Nicaragua (EEZ)', 'French Polynesia (EEZ)',
+    'Contiguous Zone of the Netherlands', 'Costa Rica (EEZ)',
+    'New Zealand (EEZ)');
 EOF
 
  psql -d "${DBNAME}" -v ON_ERROR_STOP=1 << EOF
@@ -799,43 +823,53 @@ EOF
   UPDATE countries SET europe = 3 WHERE country_name_en IN ('Spain',
     'United Kingdom', 'Italy', 'Poland');
   -- More than 50K
-  UPDATE countries SET europe = 4 WHERE country_name_en IN ('Netherlands',
-    'Ukraine');
+  UPDATE countries SET europe = 4 WHERE country_name_en IN ('Netherlands');
   -- More than 20K
   UPDATE countries SET europe = 5 WHERE country_name_en IN ('Belgium',
-    'Austria', 'Switzerland', 'Croatia', 'Sweden', 'Czechia', 'Belarus');
+    'Austria', 'Switzerland', 'Croatia', 'Sweden', 'Czechia');
   -- More than 10K
   UPDATE countries SET europe = 6 WHERE country_name_en IN ('Greece',
-    'Ireland', 'Romania', 'Hungary', 'Portugal', 'Finland', 'Slovakia',
-    'Denmark', 'Côte d''Ivoire', 'Algeria');
+    'Ireland', 'Hungary','Ukraine', 'Portugal', 'Slovakia', 'Denmark',
+    'Côte d''Ivoire', 'Algeria');
   -- More than 5K
   UPDATE countries SET europe = 7 WHERE country_name_en IN ('Norway',
-    'Congo-Kinshasa','South Africa', 'Latvia', 'Bulgaria', 'Libya', 'Egypt',
-    'Serbia');
+    'Finland', 'Romania', 'Serbia', 'Libya', 'Latvia'
+    );
   -- More than 2K
-  UPDATE countries SET europe = 8 WHERE country_name_en IN ('Estonia',
-    'Lithuania', 'Bosnia and Herzegovina', 'Ghana', 'Slovenia', 'Kosovo',
-    'Iceland', 'Albania', 'Montenegro', 'Luxembourg', 'Angola', 'Tunisia',
-    'Morocco', 'Russia');
+  UPDATE countries SET europe = 8 WHERE country_name_en IN ('Morocco', 
+    'Democratic Republic of the Congo', 'Bosnia and Herzegovina', 'Bulgaria',
+    'Ghana', 'Slovenia', 'Belarus', 'Kosovo', 'Iceland', 'Lithuania', 'Albania',
+    'Russia', 'South Africa', 'Estonia', 'Montenegro', 'Luxembourg', 'Angola', 
+    'Tunisia');
   -- More than 1K
-  UPDATE countries SET europe = 9 WHERE country_name_en IN ('Namibia',
-    'Nigeria', 'Togo', 'Macedonia', 'Jersey', 'Cameroon', 'Burkina Faso',
-    'Senegal', 'Namibia', 'Mali');
+  UPDATE countries SET europe = 9 WHERE country_name_en IN ('Nigeria', 
+    'Togo', 'North Macedonia', 'Jersey', 'Cameroon', 'Burkina Faso',
+    'Namibia', 'Senegal', 'Mali');
   -- Less than 1K
-  UPDATE countries SET europe = 10 WHERE country_name_en IN ('Sudan',
-    'South Sudan', 'Central African Republic', 'Zambia', 'Botswana',
-    'Greenland', 'Zimbabwe', 'Malta', 'Sudan', 'Benin', 'Niger', 'Guadeloupe',
-    'Guinea');
+  UPDATE countries SET europe = 10 WHERE country_name_en IN ('Malta', 'Benin', 
+    'Niger', 'Guinea');
   -- Less than 500
-  UPDATE countries SET europe = 11 WHERE country_name_en IN (
-    'São Tomé and Príncipe', 'Cape Verde', 'Guernsey',
-    'Democratic Republic of the Congo', 'Congo-Brazzaville', 'Gabon',
-    'Equatorial Guinea', 'Liberia', 'Sierra Leone', 'Guinea-Bissau',
-    'The Gambia', 'Mauritania', 'Isle of Man', 'San Marino', 'North Macedonia',
-    'Faroe Islands', 'Vatican City', 'Andorra',
-    'Sahrawi Arab Democratic Republic', 'Chad',
-    'Saint Helena, Ascension and Tristan da Cunha', 'Gibraltar',
-    'Liechtenstein', 'Monaco', 'Brazil', 'São Tomé and Príncipe');
+  UPDATE countries SET europe = 11 WHERE country_name_en IN ('Sierra Leone', 
+    'Mauritania', 'Congo-Brazzaville', 'Chad', 'Cape Verde', 'Botswana',
+    'Andorra', 'Guernsey', 'Isle of Man', 'Central African Republic', 
+    'Faroe Islands', 'Guinea-Bissau', 'Liberia', 'The Gambia', 'San Marino',
+    'Gabon', 'Liechtenstein', 'Gibraltar', 'Monaco', 'Equatorial Guinea',
+    'Sahrawi Arab Democratic Republic', 'Vatican City', 'Zambia', 
+    'São Tomé and Príncipe', 'Greenland', 
+    'Saint Helena, Ascension and Tristan da Cunha', 
+    'Sudan', 'Brazil');
+  -- Maritimes areas
+  UPDATE countries SET europe = 12 WHERE country_name_en IN ('Spain (EEZ)',
+    'United Kingdom (EEZ)', 'Italy (EEZ)', 'Germany (EEZ)', 'Norway (EEZ)',
+    'France (EEZ) - Mediterranean Sea', 'Denmark (EEZ)', 'Ireland (EEZ)',
+    'Dutch Exclusive Economic Zone', 'Sweden (EEZ)',
+    'Contiguous Zone of the Netherlands', 'France (Contiguous Zone)',
+    'South Africa (EEZ)', 'Brazil (EEZ)', 'Belgium (EEZ)', 'Poland (EEZ)',
+    'Russia (EEZ)', 'Iceland (EEZ)',
+    'Fisheries protection zone around Jan Mayen',
+    'South Georgia and the South Sandwich Islands',
+    'Fishing territory around the Faroe Islands',
+    'France (contiguous area in the Gulf of Biscay and west of English Channel)');
 EOF
 
  psql -d "${DBNAME}" -v ON_ERROR_STOP=1 << EOF
@@ -847,62 +881,71 @@ EOF
     'Ukraine');
   -- More than 20K
   UPDATE countries SET russia_middle_east = 3 WHERE country_name_en IN (
-    'Belarus', 'Iraq', 'Turkey');
+    'Iraq', 'Belarus', 'Turkey');
   -- More than 10K
-  UPDATE countries SET russia_middle_east = 4 WHERE country_name_en IN (
-    'Greece', 'Uzbekistan', 'Finland', 'Romania');
+  UPDATE countries SET russia_middle_east = 4 WHERE country_name_en IN ('');
   -- More than 5K
   UPDATE countries SET russia_middle_east = 5 WHERE country_name_en IN (
-    'Norway', 'Saudi Arabia', 'Georgia', 'South Africa', 'Latvia', 'Armenia',
-    'Pakistan', 'Egypt', 'Bulgaria', 'Libya', 'Congo-Kinshasa', 'Kazakhstan',
-    'Azerbaijan', 'Israel');
+    'Romania', 'Saudi Arabia', 'Georgia', 'Armenia', 'Egypt', 'Israel', 
+    'Finland', 'Azerbaijan', 'Democratic Republic of the Congo', 'Moldova' 
+    );
   -- More than 2K
   UPDATE countries SET russia_middle_east = 6 WHERE country_name_en IN (
-    'Estonia', 'Lithuania', 'Moldova', 'United Arab Emirates', 'Cyprus',
-    'Tanzania', 'Yemen', 'West Bank', 'Syria', 'Uganda', 'Tajikistan',
-    'Ethiopia', 'Jordan', 'United States', 'France');
+    'United Arab Emirates', 'Cyprus', 'South Africa', 'Tanzania', 'Yemen',
+    'Kazakhstan', 'Greece', 'Syria', 'Uganda', 'France', 'Ethiopia', 
+    'Bulgaria', 'Jordan');
   -- More than 1K
   UPDATE countries SET russia_middle_east = 7 WHERE country_name_en IN (
-    'Namibia', 'Turkmenistan', 'Reunion', 'Oman', 'Kenya', 'Gaza Strip',
-    'Lebanon', 'Madagascar', 'Zimbabwe');
+    'Uzbekistan', 'Lithuania', 'Oman', 'Turkmenistan', 'Kenya', 'Lebanon',
+    'Madagascar', 'Latvia', 'Zimbabwe');
   -- Less than 1K
-  UPDATE countries SET russia_middle_east = 8 WHERE country_name_en IN ('Sudan',
-     'South Sudan', 'Central African Republic', 'Zambia', 'Botswana',
-     'Afghanistan', 'Sudan', 'Kuwait', 'Somalia', 'Mozambique', 'Qatar',
-     'Mayotte', 'Mauritius');
+  UPDATE countries SET russia_middle_east = 8 WHERE country_name_en IN (
+    'Estonia', 'Sudan', 'Kuwait', 'Somalia', 'Mozambique', 'Qatar', 'Zambia', 
+    'Mauritius');
   -- Less than 500
   UPDATE countries SET russia_middle_east = 9 WHERE country_name_en IN (
-    'Comoros', 'Bahrain', 'Eritrea', 'Malawi', 'Burundi', 'Djibouti',
-    'Democratic Republic of the Congo', 'Rwanda', 'Eswatini',
-    'British Sovereign Base Areas', 'Lesotho', 'Seychelles');
+    'Botswana', 'Rwanda', 'Bahrain', 'Malawi', 'Seychelles', 'South Sudan', 
+    'Lesotho', 'Burundi', 'Eritrea', 'Norway', 'Djibouti', 'Afghanistan', 
+    'Comoros', 'Eswatini', 'Central African Republic', 'Pakistan', 
+    'Libya', 'Namibia', 'Gaza Strip');
+  -- Maritimes areas
+  UPDATE countries SET russia_middle_east = 10 WHERE country_name_en IN (
+    'British Sovereign Base Areas', 'Fisheries protection zone around Svalbard',
+    'NEAFC (EEZ)', 'South Africa (EEZ)',
+    'France - La Réunion - Tromelin Island (EEZ)');
 EOF
 
  psql -d "${DBNAME}" -v ON_ERROR_STOP=1 << EOF
   -- More than 20K
-  UPDATE countries SET asia_oceania = 1 WHERE country_name_en IN ('Russia',
-    'Australia', 'India', 'China', 'Philippines', 'Japan', 'Taiwan',
+  UPDATE countries SET asia_oceania = 1 WHERE country_name_en IN ('Australia',
+    'India', 'Russia', 'China', 'Philippines', 'Japan', 'Taiwan',
     'Indonesia');
   -- More than 10K
   UPDATE countries SET asia_oceania = 2 WHERE country_name_en IN ('Thailand',
-    'South Korea', 'Vietnam', 'Kazakhstan', 'Malaysia', 'Uzbekistan');
+    'South Korea', 'Vietnam', 'Malaysia');
   -- More than 5K
   UPDATE countries SET asia_oceania = 3 WHERE country_name_en IN ('New Zealand',
-    'Myanmar', 'Nepal', 'Pakistan');
+    'Kazakhstan', 'Uzbekistan', 'Myanmar', 'Nepal', 'Pakistan');
   -- More than 2K
   UPDATE countries SET asia_oceania = 4 WHERE country_name_en IN ('Kyrgyzstan',
-    'Cambodia', 'Sri Lanka', 'Bangladesh', 'Laos', 'Hong Kong', 'Singapore',
-    'Tajikistan', 'United States', 'France');
+    'Cambodia', 'Sri Lanka', 'Bangladesh', 'Laos', 'Singapore',
+    'Tajikistan');
   -- More than 1K
-  UPDATE countries SET asia_oceania = 5 WHERE country_name_en IN ('Mongolia',
-    'Turkmenistan');
+  UPDATE countries SET asia_oceania = 5 WHERE country_name_en IN ('Mongolia');
   -- Less than 1K
-  UPDATE countries SET asia_oceania = 6 WHERE country_name_en IN ('Afghanistan',
-    'New Caledonia');
+  UPDATE countries SET asia_oceania = 6 WHERE country_name_en IN ('France',
+    'Afghanistan');
   -- Less than 500
-  UPDATE countries SET asia_oceania = 7 WHERE country_name_en IN ('North Korea',
-    'Bhutan', 'East Timor', 'Vanuatu', 'Brunei', 'Solomon Islands', 'Palau',
-    'Tuvalu', 'Federated States of Micronesia', 'Marshall Islands', 'Fiji',
-    'Kiribati', 'Maldives', 'Nauru', 'Papua New Guinea');
+  UPDATE countries SET asia_oceania = 7 WHERE country_name_en IN ('Maldives',
+    'Bhutan', 'Vanuatu', 'East Timor', 'Fiji', 'Papua New Guinea',
+    'United States', 'North Korea', 'Brunei', 'Solomon Islands', 'Palau',
+    'Federated States of Micronesia', 'Marshall Islands', 'Kiribati',
+    'Turkmenistan', 'Tuvalu', 'Nauru');
+  -- Maritimes areas
+  UPDATE countries SET asia_oceania = 8 WHERE country_name_en IN (
+    'Philippine (EEZ)', 'Australia (EEZ)', 'British Indian Ocean Territory',
+    'New Caledonia (EEZ)', 'New Zealand (EEZ)',
+    'New Zealand (Contiguous Zone)');
 EOF
 }
 
@@ -935,7 +978,7 @@ checkPrereqs
   cleanPartial
   if [ "${PROCESS_TYPE}" == "--boundaries" ] ; then
    echo "$(date) Ending process"
-   exit
+   exit 0
   fi
  fi
  downloadPlanetNotes
