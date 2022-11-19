@@ -89,6 +89,7 @@ MARITIMES_FILE=maritimes
 QUERY_FILE=query
 XSLT_NOTES_FILE=notes-csv.xslt
 XSLT_NOTE_COMMENTS_FILE=note_comments-csv.xslt
+XMLSCHEMA_PLANET_NOTES=OSM-notes-planet-schema.xsd
 OUTPUT_NOTES_FILE=output-notes.csv
 OUTPUT_NOTE_COMMENTS_FILE=output-note_comments.csv
 PLANET_NOTES_FILE=planet-notes-latest.osn
@@ -141,6 +142,11 @@ function checkPrereqs {
  ## Java
  if ! java --version > /dev/null 2>&1 ; then
   echo "ERROR: Java JRE is missing."
+  exit 1
+ fi
+ ## XML lint
+ if ! xmllint --version > /dev/null 2>&1 ; then
+  echo "ERROR: XMLlint is missing."
   exit 1
  fi
  ## Saxon Jar
@@ -440,6 +446,10 @@ function downloadPlanetNotes {
  echo "Extracting Planet notes..."
  bzip2 -d "${PLANET_NOTES_FILE}.bz2"
  mv "${PLANET_NOTES_FILE}" "${PLANET_NOTES_FILE}.xml"
+}
+
+function validatePlanetNotesXMLFile {
+ xmllint --noout --schema "${XMLSCHEMA_PLANET_NOTES}" "${PLANET_NOTES_FILE}.xml"
 }
 
 function convertPlanetNotesToFlatFile {
@@ -929,6 +939,7 @@ checkPrereqs
   fi
  fi
  downloadPlanetNotes
+ validatePlanetNotesXMLFile
  convertPlanetNotesToFlatFile
  createsFunctionToGetCountry
  createsProcedures
