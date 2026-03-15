@@ -26,6 +26,10 @@ fi
 # DB_PORT="5432"
 # DB_PASSWORD="your_secure_password_here"
 
+# Logging: verbosity for script output (TRACE, DEBUG, INFO, WARN, ERROR, FATAL).
+# shellcheck disable=SC2034
+declare LOG_LEVEL="${LOG_LEVEL:-ERROR}"
+
 # Email configuration for reports.
 declare EMAILS="${EMAILS:-username@domain.com}"
 
