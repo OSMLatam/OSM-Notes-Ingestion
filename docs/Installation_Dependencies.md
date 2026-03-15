@@ -122,6 +122,15 @@ gdalinfo --version
 On Linux, PostgreSQL often uses *peer* authentication for local connections: the OS user must match the
 database role. Running `sudo -u postgres psql ...` ensures the connection runs as the `postgres` system user.
 
+**How to verify peer is active:** Check that local connections use method `peer` in `pg_hba.conf`:
+
+```bash
+# Show relevant lines (local connections and auth method)
+sudo grep -E '^\s*local\s' /etc/postgresql/*/main/pg_hba.conf
+```
+
+You should see lines ending in `peer` (e.g. `local all all peer`). After editing `pg_hba.conf`, run `sudo systemctl reload postgresql` for changes to take effect.
+
 ---
 
 ## Database Setup
@@ -228,20 +237,28 @@ nano etc/properties.sh
 
 ### 2. Required Configuration Variables
 
-Set these variables in `etc/properties.sh` or as environment variables:
+Copy the example and edit `etc/properties.sh` (see `etc/properties.sh.example`). The example already defines **DBNAME** and **DB_USER**; set them to your database and PostgreSQL role.
+
+**Required for all setups** (in `etc/properties.sh` or environment):
 
 ```bash
-# Database connection
-export DB_HOST="localhost"
-export DB_PORT="5432"
-export DB_NAME="notes"
+# Database connection (names match etc/properties.sh.example)
+export DBNAME="notes"
 export DB_USER="notes"
+```
+
+**Optional** — only needed for remote connections or password authentication (not for local peer auth):
+
+```bash
+export DB_HOST="localhost"   # Omit for peer auth (Unix socket)
+export DB_PORT="5432"
 export DB_PASSWORD="your_secure_password_here"
+```
 
-# Logging
-export LOG_LEVEL="INFO"  # TRACE, DEBUG, INFO, WARN, ERROR, FATAL
+**Other common options** (in `etc/properties.sh` or environment):
 
-# Processing options
+```bash
+export LOG_LEVEL="INFO"       # TRACE, DEBUG, INFO, WARN, ERROR, FATAL
 export SKIP_XML_VALIDATION="false"  # Set to "true" to skip XML validation
 ```
 
@@ -252,7 +269,7 @@ export SKIP_XML_VALIDATION="false"  # Set to "true" to skip XML validation
 source etc/properties.sh
 
 # Or export variables directly
-export DB_NAME="notes"
+export DBNAME="notes"
 export DB_USER="notes"
 # ... etc
 ```

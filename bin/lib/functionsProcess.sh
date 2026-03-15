@@ -2129,6 +2129,11 @@ function __checkPrereqsCommands {
  if [[ -n "${DB_USER:-}" ]]; then
   export PGUSER="${DB_USER}"
  fi
+ if [[ -n "${DB_PASSWORD:-}" ]]; then
+  export PGPASSWORD="${DB_PASSWORD}"
+ else
+  unset PGPASSWORD
+ fi
 
  # shellcheck disable=SC2312
  # Intentional: pipeline return value is checked by if statement
