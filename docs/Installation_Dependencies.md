@@ -2,7 +2,7 @@
 title: "Installation and Dependencies Guide"
 description: "Complete guide to install dependencies and set up OSM-Notes-Ingestion for development"
 version: "1.0.0"
-last_updated: "2026-01-26"
+last_updated: "2025-03-15"
 author: "AngocA"
 tags:
   - "installation"
@@ -59,10 +59,13 @@ Install all required dependencies on Ubuntu/Debian:
 sudo apt-get update
 
 # PostgreSQL with PostGIS extension
-sudo apt-get install -y postgresql postgresql-contrib postgis postgresql-14-postgis-3
+sudo apt-get install -y postgresql postgis
+# If CREATE EXTENSION postgis fails, install the PostGIS extension for your PostgreSQL major version (14, 15, 16, etc.):
+# PG_MAJOR=$(psql --version | sed -n 's/.* \([0-9]*\)\..*/\1/p') && sudo apt-get install -y "postgresql-${PG_MAJOR}-postgis-3"
+# If CREATE EXTENSION btree_gist fails, install the contrib package for your version (e.g. postgresql-17-contrib or postgresql-contrib).
 
 # Standard UNIX utilities
-sudo apt-get install -y grep awk sed curl jq bc
+sudo apt-get install -y curl jq bc
 
 # Parallel processing
 sudo apt-get install -y parallel
@@ -79,12 +82,14 @@ sudo apt-get update
 sudo apt-get install -y gdal-bin
 
 # Node.js and npm (for geographic tools)
-curl -fsSL https://deb.nodesource.com/setup_18.x | sudo -E bash -
+curl -fsSL https://deb.nodesource.com/setup_20.x | sudo -E bash -
 sudo apt-get install -y nodejs
 
 # Install Node.js tools globally
 sudo npm install -g osmtogeojson
 sudo npm install -g ajv-cli
+# Note: You may see npm "deprecated" warnings (e.g. @xmldom/xmldom, inflight, glob). These come from
+# upstream dependencies of osmtogeojson and ajv-cli; the tools work correctly for this project.
 
 # Email notifications (for monitoring alerts)
 sudo apt-get install -y mutt
@@ -99,8 +104,8 @@ sudo apt-get install -y git
 # Check PostgreSQL version
 psql --version  # Should be 12+
 
-# Check PostGIS
-psql -d postgres -c "SELECT PostGIS_version();"
+# Check PostGIS is available (extension is created per-database later, e.g. in database "notes")
+sudo -u postgres psql -d postgres -c "SELECT name, default_version FROM pg_available_extensions WHERE name = 'postgis';"
 
 # Check Bash version
 bash --version  # Should be 4.0+
@@ -109,10 +114,13 @@ bash --version  # Should be 4.0+
 parallel --version
 jq --version
 curl --version
-node --version  # Should be 18+
+node --version  # Should be 20+
 npm --version
 gdalinfo --version
 ```
+
+On Linux, PostgreSQL often uses *peer* authentication for local connections: the OS user must match the
+database role. Running `sudo -u postgres psql ...` ensures the connection runs as the `postgres` system user.
 
 ---
 
@@ -137,8 +145,10 @@ exit
 
 ### 2. Enable PostGIS Extension
 
+Run as the `postgres` system user so peer authentication succeeds (the `postgres` role can create extensions in any database):
+
 ```bash
-psql -d notes -U notes << EOF
+sudo -u postgres psql -d notes << EOF
 CREATE EXTENSION IF NOT EXISTS postgis;
 CREATE EXTENSION IF NOT EXISTS btree_gist;
 \q
@@ -148,8 +158,8 @@ EOF
 ### 3. Verify Database Setup
 
 ```bash
-psql -d notes -U notes -c "SELECT PostGIS_version();"
-psql -d notes -U notes -c "\dx"  # List installed extensions
+sudo -u postgres psql -d notes -c "SELECT PostGIS_version();"
+sudo -u postgres psql -d notes -c "\dx"  # List installed extensions
 ```
 
 ---
