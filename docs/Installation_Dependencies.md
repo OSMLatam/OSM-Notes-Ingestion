@@ -239,7 +239,7 @@ The scripts read and write backup data (note locations, countries, maritimes) un
 sudo chown -R notes:maptimebogota /path/to/OSM-Notes-Ingestion/data
 ```
 
-**Option B – Use a dedicated data directory (recommended for production):** Set `DATA_DIR` in `etc/properties.sh` (or in the systemd unit). The service then does **not** need write access to the repository, so you do **not** need to change any permissions inside the repo. The recommended path is `/var/lib/osm-notes-ingestion`. Under the Linux FHS, `/var/lib` is for **application state data** (persistent data that the program writes and updates), not for code libraries (those live under `/usr/lib`). Examples: `/var/lib/postgresql`, `/var/lib/dpkg`.
+**Option B – Use a dedicated data directory (recommended for production):** Set `DATA_DIR` in `etc/properties.sh`. The daemon loads that file on startup, so you do **not** need to change the systemd service file. The service then does **not** need write access to the repository. The recommended path is `/var/lib/osm-notes-ingestion`. Under the Linux FHS, `/var/lib` is for **application state data** (persistent data that the program writes and updates), not for code libraries (those live under `/usr/lib`). Examples: `/var/lib/postgresql`, `/var/lib/dpkg`.
 
 ```bash
 # In etc/properties.sh (or export before starting the daemon)

@@ -16,6 +16,8 @@ User=notes
 WorkingDirectory=/home/notes/OSM-Notes-Ingestion
 
 # Environment variables
+# The daemon sources etc/properties.sh, so set DATA_DIR there (no need to add it here).
+# Optional: override here if you prefer, e.g. Environment="DATA_DIR=/var/lib/osm-notes-ingestion"
 # Ensure PATH includes standard directories for commands (setsid, readlink, etc.)
 Environment="PATH=/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin"
 Environment="LOG_LEVEL=INFO"
