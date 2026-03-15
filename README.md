@@ -902,7 +902,7 @@ The project uses PostgreSQL for data storage. Before running the scripts, ensure
 1. **Install PostgreSQL:**
 
    ```bash
-   sudo apt-get update && sudo apt-get install postgresql postgresql-contrib
+   sudo apt-get update && sudo apt-get install postgresql
    ```
 
 2. **Configure authentication (choose one option):**

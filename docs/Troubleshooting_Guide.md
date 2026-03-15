@@ -290,8 +290,9 @@ psql -d "${DBNAME:-notes}" -c "SELECT ST_Contains(ST_MakePoint(0,0), ST_MakePoin
 1. **Install PostGIS extension:**
 
    ```bash
-   # Install PostGIS package (Ubuntu/Debian)
+   # Install PostGIS package (Ubuntu/Debian). Use version-specific package if needed (XX = PostgreSQL major version, e.g. 14, 15, 16):
    sudo apt-get install postgis postgresql-XX-postgis-3
+   # Or detect version: PG_MAJOR=$(psql --version | sed -n 's/.* \([0-9]*\)\..*/\1/p') && sudo apt-get install -y "postgresql-${PG_MAJOR}-postgis-3"
 
    # Enable extension in database
    psql -d "${DBNAME:-notes}" -c "CREATE EXTENSION IF NOT EXISTS postgis;"
