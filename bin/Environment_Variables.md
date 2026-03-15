@@ -66,6 +66,17 @@ These variables are used across **all scripts** and should be standardized:
   - When set, overrides automatic detection
 - **Example**: `export LOCK_DIR=/custom/locks/path`
 
+### `DATA_DIR`
+
+- **Purpose**: Directory for backup and generated data (noteLocation CSV, countries/maritimes GeoJSON, EEZ analysis).
+- **Values**: Absolute path to a writable directory.
+- **Default**: `${SCRIPT_BASE_DIRECTORY}/data` (project root `data/`).
+- **Behavior**:
+  - When set (e.g. in production), all scripts read and write backups under this path.
+  - Use a dedicated directory (e.g. `/var/lib/osm-notes-ingestion`) so the service user does not need write access to the repository.
+- **Recommended for production**: `/var/lib/osm-notes-ingestion` (FHS: `/var/lib` is for application state data, not code libraries).
+- **Example**: `export DATA_DIR=/var/lib/osm-notes-ingestion`
+
 ### `FORCE_FALLBACK_MODE`
 
 - **Purpose**: Force fallback mode even if system is installed

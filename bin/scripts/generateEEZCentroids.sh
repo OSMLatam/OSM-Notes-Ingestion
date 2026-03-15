@@ -16,7 +16,7 @@
 #   See data/eez_analysis/LICENSE for full license details.
 #
 # Author: Andres Gomez (AngocA)
-# Version: 2025-12-11
+# Version: 2026-03-15
 
 set -euo pipefail
 set -E
@@ -34,8 +34,8 @@ EEZ_SHAPEFILE="${EEZ_SHAPEFILE:-/home/notes/World_EEZ_v12_20231025.zip}"
 EEZ_TEMP_DIR="${EEZ_TEMP_DIR:-/tmp/world_eez_centroids}"
 EEZ_SHAPEFILE_LAYER="${EEZ_SHAPEFILE_LAYER:-eez_v12}"
 
-# Output file
-OUTPUT_DIR="${OUTPUT_DIR:-${SCRIPT_BASE_DIRECTORY}/data/eez_analysis}"
+# Output directory (DATA_DIR set in commonFunctions.sh)
+OUTPUT_DIR="${OUTPUT_DIR:-${DATA_DIR}/eez_analysis}"
 OUTPUT_CSV="${OUTPUT_DIR}/eez_centroids.csv"
 
 # Temporary directory for this script (if not already set by common functions)

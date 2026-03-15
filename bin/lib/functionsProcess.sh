@@ -5,8 +5,8 @@
 # It loads all function modules for use across the project.
 #
 # Author: Andres Gomez (AngocA)
-# Version: 2025-12-29
-VERSION="2025-12-29"
+# Version: 2026-03-15
+VERSION="2026-03-15"
 
 # shellcheck disable=SC2317,SC2155
 # NOTE: SC2154 warnings are expected as many variables are defined in sourced files
@@ -624,7 +624,7 @@ if ! declare -p CSV_BACKUP_NOTE_LOCATION > /dev/null 2>&1; then
  declare -r CSV_BACKUP_NOTE_LOCATION="/tmp/noteLocation.csv"
 fi
 if ! declare -p CSV_BACKUP_NOTE_LOCATION_COMPRESSED > /dev/null 2>&1; then
- declare -r CSV_BACKUP_NOTE_LOCATION_COMPRESSED="${SCRIPT_BASE_DIRECTORY}/data/noteLocation.csv.zip"
+ declare -r CSV_BACKUP_NOTE_LOCATION_COMPRESSED="${DATA_DIR:-${SCRIPT_BASE_DIRECTORY}/data}/noteLocation.csv.zip"
 fi
 
 # GitHub repository URL for note location backup (can be overridden via environment variable)

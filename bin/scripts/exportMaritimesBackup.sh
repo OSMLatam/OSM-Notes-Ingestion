@@ -27,8 +27,8 @@
 # 255) General error
 #
 # Author: Andres Gomez (AngocA)
-# Version: 2025-12-30
-VERSION="2025-12-30"
+# Version: 2026-03-15
+VERSION="2026-03-15"
 
 # Base directory for the project.
 SCRIPT_BASE_DIRECTORY="$(cd "$(dirname "${BASH_SOURCE[0]}")/../.." \
@@ -54,8 +54,8 @@ source "${SCRIPT_BASE_DIRECTORY}/lib/osm-common/commonFunctions.sh"
 # Database name
 declare DBNAME="${DBNAME:-notes}"
 
-# Output file
-declare -r OUTPUT_FILE="${SCRIPT_BASE_DIRECTORY}/data/maritimes.geojson"
+# Output file (DATA_DIR set in commonFunctions.sh)
+declare -r OUTPUT_FILE="${DATA_DIR}/maritimes.geojson"
 
 ###############################################################################
 # Main function
@@ -105,7 +105,7 @@ main() {
 
  # Create data directory if it doesn't exist
  __logd "Ensuring data directory exists..."
- mkdir -p "${SCRIPT_BASE_DIRECTORY}/data"
+ mkdir -p "${DATA_DIR}"
 
  # Export maritimes to GeoJSON using ogr2ogr
  # Use is_maritime = true to identify maritime boundaries

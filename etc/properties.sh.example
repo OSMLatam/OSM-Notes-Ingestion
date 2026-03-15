@@ -6,7 +6,12 @@
 # Then edit etc/properties.sh with your database credentials.
 #
 # Author: Andres Gomez (AngocA)
-# Version: 2025-03-15
+# Version: 2026-03-15
+
+# Data directory for backups (noteLocation, countries, maritimes). Default: project root/data.
+# Set in etc/properties.sh for production so the service user does not need write access to the repo.
+# Uncomment and set to a path like /var/lib/osm-notes-ingestion; then create that dir and chown to the service user.
+# export DATA_DIR="/var/lib/osm-notes-ingestion"
 
 # Database configuration
 # All database connections must be controlled by this file.

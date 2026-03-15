@@ -52,8 +52,8 @@
 # For contributing: shellcheck -x -o all updateCountries.sh && shfmt -w -i 1 -sr -bn updateCountries.sh
 #
 # Author: Andres Gomez (AngocA)
-# Version: 2026-01-20
-VERSION="2026-01-20"
+# Version: 2026-03-15
+VERSION="2026-03-15"
 
 #set -xv
 # Fails when a variable is not initialized.
@@ -687,9 +687,9 @@ function __checkBoundariesUpdateNeeded {
  # Determine backup file location if not provided
  if [[ -z "${BACKUP_FILE}" ]]; then
   if [[ "${TYPE}" == "countries" ]]; then
-   BACKUP_FILE="${SCRIPT_BASE_DIRECTORY}/data/countries.geojson"
+   BACKUP_FILE="${DATA_DIR}/countries.geojson"
   elif [[ "${TYPE}" == "maritimes" ]]; then
-   BACKUP_FILE="${SCRIPT_BASE_DIRECTORY}/data/maritimes.geojson"
+   BACKUP_FILE="${DATA_DIR}/maritimes.geojson"
   else
    __loge "ERROR: Unknown type: ${TYPE}"
    __log_finish
@@ -802,9 +802,9 @@ function __checkMaritimesUpdateNeeded {
  __log_start
  __logd "Checking if maritime boundaries update is needed..."
 
- # Determine backup file location
+ # Determine backup file location (DATA_DIR set in commonFunctions.sh)
  local REPO_MARITIMES_BACKUP
- REPO_MARITIMES_BACKUP="${SCRIPT_BASE_DIRECTORY}/data/maritimes.geojson"
+ REPO_MARITIMES_BACKUP="${DATA_DIR}/maritimes.geojson"
 
  # If backup doesn't exist, update is needed
  if [[ ! -f "${REPO_MARITIMES_BACKUP}" ]] || [[ ! -s "${REPO_MARITIMES_BACKUP}" ]]; then
@@ -1267,7 +1267,7 @@ function __checkMissingMaritimes() {
  __logi "Checking for missing maritime boundaries (verifying EEZ centroids against OSM)..."
 
  # Path to EEZ centroids CSV file (should be generated from shapefile)
- local EEZ_CENTROIDS_FILE="${SCRIPT_BASE_DIRECTORY}/data/eez_analysis/eez_centroids.csv"
+ local EEZ_CENTROIDS_FILE="${DATA_DIR}/eez_analysis/eez_centroids.csv"
  if [[ ! -f "${EEZ_CENTROIDS_FILE}" ]]; then
   __logd "EEZ centroids file not found: ${EEZ_CENTROIDS_FILE}"
   __logd "To enable this check, generate centroids from World_EEZ shapefile"
@@ -1360,7 +1360,7 @@ function __checkMissingMaritimes() {
  # Query Overpass API for each centroid to see if it's contained in any maritime relation
  local MISSING_COUNT=0
  local CHECKED_COUNT=0
- local OUTPUT_DIR="${SCRIPT_BASE_DIRECTORY}/data/eez_analysis"
+ local OUTPUT_DIR="${DATA_DIR}/eez_analysis"
  mkdir -p "${OUTPUT_DIR}"
  local MISSING_EEZ_FILE
  MISSING_EEZ_FILE="${OUTPUT_DIR}/missing_eez_osm_$(date +%Y%m%d).csv"

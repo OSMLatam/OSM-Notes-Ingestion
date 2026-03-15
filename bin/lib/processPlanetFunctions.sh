@@ -4,8 +4,8 @@
 # This file contains functions for processing Planet data.
 #
 # Author: Andres Gomez (AngocA)
-# Version: 2025-12-05
-VERSION="2025-12-05"
+# Version: 2026-03-15
+VERSION="2026-03-15"
 
 # Show help function
 function __show_help() {
@@ -438,12 +438,12 @@ function __processCountries() {
  __log_start
  __logd "Processing countries."
 
- # Determine SCRIPT_BASE_DIRECTORY if not set
+ # Determine backup path (DATA_DIR is set in commonFunctions.sh)
  local REPO_COUNTRIES_BACKUP
- if [[ -n "${SCRIPT_BASE_DIRECTORY:-}" ]]; then
-  REPO_COUNTRIES_BACKUP="${SCRIPT_BASE_DIRECTORY}/data/countries.geojson"
+ local DATA_DIR_VAL="${DATA_DIR:-${SCRIPT_BASE_DIRECTORY:-}/data}"
+ if [[ -n "${DATA_DIR_VAL}" ]]; then
+  REPO_COUNTRIES_BACKUP="${DATA_DIR_VAL}/countries.geojson"
  else
-  # Fallback: try to determine from script location
   local SCRIPT_DIR
   SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")/../.." &> /dev/null && pwd || echo "")"
   if [[ -n "${SCRIPT_DIR}" ]]; then
@@ -561,12 +561,12 @@ function __processMaritimes() {
  __log_start
  __logd "Processing maritimes."
 
- # Determine SCRIPT_BASE_DIRECTORY if not set
+ # Determine backup path (DATA_DIR is set in commonFunctions.sh)
  local REPO_MARITIMES_BACKUP
- if [[ -n "${SCRIPT_BASE_DIRECTORY:-}" ]]; then
-  REPO_MARITIMES_BACKUP="${SCRIPT_BASE_DIRECTORY}/data/maritimes.geojson"
+ local DATA_DIR_VAL="${DATA_DIR:-${SCRIPT_BASE_DIRECTORY:-}/data}"
+ if [[ -n "${DATA_DIR_VAL}" ]]; then
+  REPO_MARITIMES_BACKUP="${DATA_DIR_VAL}/maritimes.geojson"
  else
-  # Fallback: try to determine from script location
   local SCRIPT_DIR
   SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")/../.." &> /dev/null && pwd || echo "")"
   if [[ -n "${SCRIPT_DIR}" ]]; then

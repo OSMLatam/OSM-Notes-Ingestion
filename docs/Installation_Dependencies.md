@@ -2,7 +2,7 @@
 title: "Installation and Dependencies Guide"
 description: "Complete guide to install dependencies and set up OSM-Notes-Ingestion for development"
 version: "1.0.0"
-last_updated: "2025-03-15"
+last_updated: "2026-03-15"
 author: "AngocA"
 tags:
   - "installation"
@@ -186,6 +186,15 @@ cd OSM-Notes-Ingestion
 git submodule update --init --recursive
 ```
 
+**Production (optional):** For a production server, installing under `/opt` follows the Linux FHS and keeps application code separate from user data. Example:
+
+```bash
+sudo mkdir -p /opt
+sudo git clone --recurse-submodules https://github.com/OSM-Notes/OSM-Notes-Ingestion.git /opt/osm-notes-ingestion
+cd /opt/osm-notes-ingestion
+# Then create a dedicated data directory (see step 4) and set DATA_DIR in etc/properties.sh
+```
+
 ### 2. Verify Submodule Installation
 
 ```bash
@@ -218,6 +227,35 @@ The script sets proper ownership (`notes:maptimebogota` by default) and permissi
 - Locks: `775` (writable by owner and group)
 
 **Note**: For development, the system will use `/tmp` directories automatically. However, for production with systemd service, the lock directory `/var/run/osm-notes-ingestion` must exist and be writable by the service user.
+
+### 4. Data Directory (Production)
+
+The scripts read and write backup data (note locations, countries, maritimes) under a single **data directory**. By default this is `data/` inside the project root. When the service runs as user `notes` (e.g. under systemd), that user must be able to write there. If the repo was cloned by another user, you can either fix ownership of the repo `data/` or use a separate directory (no permission changes in the repo needed).
+
+**Option A – Keep default path, fix ownership:** Set ownership so the service user can write to the project `data/` directory (adjust paths and group to match your installation):
+
+```bash
+# Use the same user and group as in install_directories.sh (e.g. notes:maptimebogota)
+sudo chown -R notes:maptimebogota /path/to/OSM-Notes-Ingestion/data
+```
+
+**Option B – Use a dedicated data directory (recommended for production):** Set `DATA_DIR` in `etc/properties.sh` (or in the systemd unit). The service then does **not** need write access to the repository, so you do **not** need to change any permissions inside the repo. The recommended path is `/var/lib/osm-notes-ingestion`. Under the Linux FHS, `/var/lib` is for **application state data** (persistent data that the program writes and updates), not for code libraries (those live under `/usr/lib`). Examples: `/var/lib/postgresql`, `/var/lib/dpkg`.
+
+```bash
+# In etc/properties.sh (or export before starting the daemon)
+export DATA_DIR="/var/lib/osm-notes-ingestion"
+```
+
+Create the data directory and give ownership to the service user (only this directory needs to be writable by the service):
+
+```bash
+sudo mkdir -p /var/lib/osm-notes-ingestion
+sudo chown notes:maptimebogota /var/lib/osm-notes-ingestion
+```
+
+All backup and generated data (noteLocation, countries.geojson, maritimes.geojson, eez_analysis) will then be read from and written to `DATA_DIR`. See `bin/Environment_Variables.md` for the full `DATA_DIR` reference.
+
+Ensure the chosen data directory exists and has correct permissions before starting the daemon or running `processPlanetNotes.sh --base` / `updateCountries.sh --base`.
 
 ---
 
@@ -280,23 +318,33 @@ export DB_USER="notes"
 
 ### 1. Verify Prerequisites
 
-Run the prerequisites check:
+There is no standalone script that only checks prerequisites. You can:
+
+**Manual check** — Use the [Verify Installation](#verify-installation) commands earlier in this doc
+(psql, jq, curl, parallel, node, gdalinfo, etc.) and the [Test Database Connection](#2-test-database-connection) below.
+
+**Automated check (optional)** — Install [BATS](https://bats-core.readthedocs.io/) and run the
+prerequisite tests:
 
 ```bash
-# Check all prerequisites
-./bin/lib/prerequisitesFunctions.sh
-
-# Or run a test script that checks prerequisites
-./tests/run_all_tests.sh --check-prereqs
+# Install BATS: Debian/Ubuntu  sudo apt install bats-core  (or  npm install -g bats)
+bats tests/unit/bash/prerequisites_commands.test.bats
+bats tests/unit/bash/prerequisites_database.test.bats
 ```
+
+When you run the main scripts (e.g. `processAPINotes.sh`), they validate prerequisites at startup
+and exit with an error if something is missing—but that is part of normal execution, not a separate
+verification step.
 
 ### 2. Test Database Connection
 
 ```bash
-# Test connection
-psql -h localhost -U notes -d notes -c "SELECT version();"
+# With peer auth (run as postgres OS user)
+sudo -u postgres psql -d notes -c "SELECT version();"
+sudo -u postgres psql -d notes -c "SELECT PostGIS_version();"
 
-# Test PostGIS
+# With password auth (if DB_HOST/DB_PASSWORD are set)
+psql -h localhost -U notes -d notes -c "SELECT version();"
 psql -h localhost -U notes -d notes -c "SELECT PostGIS_version();"
 ```
 
@@ -393,6 +441,13 @@ chmod +x bin/scripts/*.sh
 # Check directory permissions
 ls -la /var/log/osm-notes-ingestion/  # If using installed mode
 ls -la /tmp/osm-notes-ingestion/      # If using fallback mode
+```
+
+**Data directory (production):** If the process runs as user `notes` and you see `Permission denied` when writing to `data/` (e.g. when saving `noteLocation.csv.zip`), fix ownership so the service user can write:
+
+```bash
+# Replace path and group with your installation (same user/group as install_directories.sh)
+sudo chown -R notes:maptimebogota /home/notes/OSM-Notes-Ingestion/data
 ```
 
 ---

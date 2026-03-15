@@ -8,7 +8,7 @@
 # 255) General error
 #
 # Author: Andres Gomez (AngocA)
-# Version: 2025-12-14
+# Version: 2026-03-15
 
 # Base directory for the project.
 SCRIPT_BASE_DIRECTORY="$(cd "$(dirname "${BASH_SOURCE[0]}")/../.." \
@@ -34,9 +34,9 @@ source "${SCRIPT_BASE_DIRECTORY}/lib/osm-common/commonFunctions.sh"
 # Database name
 declare DBNAME="${DBNAME:-notes}"
 
-# Output file
-declare -r OUTPUT_FILE="${SCRIPT_BASE_DIRECTORY}/data/noteLocation.csv"
-declare -r COMPRESSED_FILE="${SCRIPT_BASE_DIRECTORY}/data/noteLocation.csv.zip"
+# Output file (DATA_DIR set in commonFunctions.sh)
+declare -r OUTPUT_FILE="${DATA_DIR}/noteLocation.csv"
+declare -r COMPRESSED_FILE="${DATA_DIR}/noteLocation.csv.zip"
 
 ###############################################################################
 # Main function

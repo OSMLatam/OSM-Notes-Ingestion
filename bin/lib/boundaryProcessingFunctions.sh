@@ -2,8 +2,8 @@
 
 # Boundary Processing Functions for OSM-Notes-profile
 # Author: Andres Gomez (AngocA)
-# Version: 2026-01-20
-VERSION="2026-01-20"
+# Version: 2026-03-15
+VERSION="2026-03-15"
 
 # GitHub repository URL for boundaries data (can be overridden via environment variable)
 # Only set if not already declared (e.g., when sourced from another script)
@@ -2889,10 +2889,11 @@ function __processCountries_impl {
  __log_start
  __logi "=== STARTING COUNTRIES PROCESSING ==="
 
- # Determine backup file location
+ # Determine backup file location (DATA_DIR is set in commonFunctions.sh)
  local REPO_COUNTRIES_BACKUP
- if [[ -n "${SCRIPT_BASE_DIRECTORY:-}" ]]; then
-  REPO_COUNTRIES_BACKUP="${SCRIPT_BASE_DIRECTORY}/data/countries.geojson"
+ local DATA_DIR_VAL="${DATA_DIR:-${SCRIPT_BASE_DIRECTORY:-}/data}"
+ if [[ -n "${DATA_DIR_VAL}" ]]; then
+  REPO_COUNTRIES_BACKUP="${DATA_DIR_VAL}/countries.geojson"
  else
   local SCRIPT_DIR
   SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")/../.." &> /dev/null && pwd || echo "")"
@@ -3412,12 +3413,12 @@ function __processCountries_impl {
 function __processMaritimes_impl {
  __log_start
 
- # Determine SCRIPT_BASE_DIRECTORY if not set
+ # Determine backup path (DATA_DIR is set in commonFunctions.sh)
  local REPO_MARITIMES_BACKUP
- if [[ -n "${SCRIPT_BASE_DIRECTORY:-}" ]]; then
-  REPO_MARITIMES_BACKUP="${SCRIPT_BASE_DIRECTORY}/data/maritimes.geojson"
+ local DATA_DIR_VAL="${DATA_DIR:-${SCRIPT_BASE_DIRECTORY:-}/data}"
+ if [[ -n "${DATA_DIR_VAL}" ]]; then
+  REPO_MARITIMES_BACKUP="${DATA_DIR_VAL}/maritimes.geojson"
  else
-  # Fallback: try to determine from script location
   local SCRIPT_DIR
   SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")/../.." &> /dev/null && pwd || echo "")"
   if [[ -n "${SCRIPT_DIR}" ]]; then
