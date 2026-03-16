@@ -54,6 +54,17 @@ Removes only partition tables, keeping base tables and other components intact.
 ./bin/cleanupAll.sh --partitions-only my_database
 ```
 
+### Full cleanup in production (run as database owner)
+
+If the database and tables are owned by role `notes` (e.g. service user), you must run the script as that OS user so that `DROP TABLE` succeeds:
+
+```bash
+cd /opt/osm-notes-ingestion   # or your installation path
+sudo -u notes ./bin/cleanupAll.sh --all
+```
+
+If you run as another user (e.g. `angoca`), you may see "Failed to drop API tables" or "Check Tables failed" because only the table owner (or a superuser) can drop tables.
+
 ### Help and Options
 
 ```bash

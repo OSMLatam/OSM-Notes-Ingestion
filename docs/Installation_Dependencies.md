@@ -450,6 +450,21 @@ ls -la /tmp/osm-notes-ingestion/      # If using fallback mode
 sudo chown -R notes:maptimebogota /home/notes/OSM-Notes-Ingestion/data
 ```
 
+### Full cleanup (cleanupAll.sh) in production
+
+To **delete all data** (tables, sequences, etc.) you must run `cleanupAll.sh` as the **database owner** (the role that owns the tables, usually `notes`). With peer authentication, that means running as the same OS user.
+
+- **Wrong:** `sudo ./bin/cleanupAll.sh --all` — runs as `root`; PostgreSQL sees role `root`, which may not exist or cannot connect to database `notes`, so you get "Database notes does not exist".
+- **Wrong:** `./bin/cleanupAll.sh --all` as `angoca` — connects as `angoca`; if tables are owned by role `notes`, `angoca` cannot `DROP` them, so you get "Failed to drop API tables" and "Check Tables failed".
+- **Correct:** Run as the service/DB owner:
+
+```bash
+cd /opt/osm-notes-ingestion
+sudo -u notes ./bin/cleanupAll.sh --all
+```
+
+Ensure `etc/properties.sh` is loaded (the script sources it) and that `DBNAME`/`DB_USER` match your database and owner (e.g. `notes`). See [Cleanup_Integration.md](Cleanup_Integration.md) for options.
+
 ---
 
 ## Next Steps
