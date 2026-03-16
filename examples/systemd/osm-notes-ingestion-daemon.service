@@ -1,6 +1,7 @@
 [Unit]
 Description=OSM Notes Ingestion Processing Daemon
-Documentation=file:///home/notes/OSM-Notes-Ingestion/docs/Process_API.md
+# Update paths below to your install location (e.g. /opt/osm-notes-ingestion or /home/notes/OSM-Notes-Ingestion)
+Documentation=file:///opt/osm-notes-ingestion/docs/Process_API.md
 After=network.target postgresql.service
 Requires=postgresql.service
 
@@ -13,7 +14,7 @@ User=notes
 # Group is optional - systemd will use user's primary group automatically
 # If you need to specify, find it with: id -gn notes
 # Group=notes
-WorkingDirectory=/home/notes/OSM-Notes-Ingestion
+WorkingDirectory=/opt/osm-notes-ingestion
 
 # Environment variables
 # The daemon sources etc/properties.sh, so set DATA_DIR there (no need to add it here).
@@ -28,7 +29,7 @@ Environment="SKIP_CSV_VALIDATION=true"
 
 # Executable
 # Use absolute path with bash explicitly
-ExecStart=/bin/bash /home/notes/OSM-Notes-Ingestion/bin/process/processAPINotesDaemon.sh
+ExecStart=/bin/bash /opt/osm-notes-ingestion/bin/process/processAPINotesDaemon.sh
 ExecReload=/bin/kill -HUP $MAINPID
 
 # Process management
