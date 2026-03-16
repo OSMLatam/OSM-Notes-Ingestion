@@ -1946,9 +1946,10 @@ function __downloadBoundary_json_geojson_only() {
 
  __logi "Downloading boundary ${BOUNDARY_ID} (JSON + GeoJSON only, no DB import)"
 
- # Create query file
+ # Create query file (timeout for large relations, e.g. Indonesia)
+ local OVERPASS_TIMEOUT="${OVERPASS_SINGLE_RELATION_TIMEOUT:-600}"
  cat << EOF > "${QUERY_FILE_LOCAL}"
-[out:json];
+[out:json][timeout:${OVERPASS_TIMEOUT}];
 rel(${BOUNDARY_ID});
 (._;>;);
 out;
@@ -2262,9 +2263,10 @@ function __downloadMaritime_json_geojson_only() {
 
  __logi "Downloading maritime boundary ${BOUNDARY_ID} (JSON + GeoJSON only, no DB import)"
 
- # Create query file
+ # Create query file (timeout for large boundaries)
+ local OVERPASS_TIMEOUT="${OVERPASS_SINGLE_RELATION_TIMEOUT:-600}"
  cat << EOF > "${QUERY_FILE_LOCAL}"
-[out:json];
+[out:json][timeout:${OVERPASS_TIMEOUT}];
 rel(${BOUNDARY_ID});
 (._;>;);
 out;

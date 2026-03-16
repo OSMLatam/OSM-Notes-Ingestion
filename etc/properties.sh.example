@@ -67,9 +67,14 @@ fi
 
 # Overpass fallback and validation configuration.
 # Comma-separated list of interpreter endpoints. The first one is primary.
-# Example:
+# If the primary fails (timeout, 429, 504, etc.), the next endpoint is tried automatically.
+# Example (primary + fallback):
 #   export OVERPASS_ENDPOINTS="https://overpass-api.de/api/interpreter,https://overpass.kumi.systems/api/interpreter"
 declare OVERPASS_ENDPOINTS="${OVERPASS_ENDPOINTS:-${OVERPASS_INTERPRETER}}"
+
+# Timeout in seconds for single-relation Overpass queries (one country/maritime boundary).
+# Large boundaries (e.g. Indonesia) may need 300-600s. Overpass default is often 180s.
+declare OVERPASS_SINGLE_RELATION_TIMEOUT="${OVERPASS_SINGLE_RELATION_TIMEOUT:-600}"
 
 # Max retries per endpoint for a single boundary download attempt.
 declare OVERPASS_RETRIES_PER_ENDPOINT="${OVERPASS_RETRIES_PER_ENDPOINT:-7}"

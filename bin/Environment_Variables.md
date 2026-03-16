@@ -135,10 +135,16 @@ These variables control the Overpass API behavior for boundary downloads.
 
 #### `OVERPASS_ENDPOINTS`
 
-- **Purpose**: Ordered, comma-separated list of Overpass interpreter endpoints for fallback
+- **Purpose**: Ordered, comma-separated list of Overpass interpreter endpoints. The first is primary; if a request fails (timeout, 429, 504, invalid JSON), the next endpoint is tried automatically.
 - **Default**: value of `OVERPASS_INTERPRETER`
-- **Example**:
+- **Example** (primary + fallback):
   `export OVERPASS_ENDPOINTS="https://overpass-api.de/api/interpreter,https://overpass.kumi.systems/api/interpreter"`
+
+#### `OVERPASS_SINGLE_RELATION_TIMEOUT`
+
+- **Purpose**: Timeout in seconds for single-relation Overpass queries (one country or maritime boundary). Large boundaries (e.g. Indonesia) may need 300–600s; server default is often 180s.
+- **Default**: `600`
+- **Example**: `export OVERPASS_SINGLE_RELATION_TIMEOUT=600`
 
 #### `OVERPASS_RETRIES_PER_ENDPOINT`
 
@@ -267,7 +273,8 @@ environment):
 - **`PLANET`**: Planet dump URL (default: `https://planet.openstreetmap.org`)
 - **`OVERPASS_INTERPRETER`**: Overpass API URL
 - **`DOWNLOAD_USER_AGENT`**: User-Agent for downloads (Overpass, etc.)
-- **`OVERPASS_ENDPOINTS`**: Fallback endpoints (comma-separated)
+- **`OVERPASS_ENDPOINTS`**: Fallback endpoints (comma-separated); next used if current fails
+- **`OVERPASS_SINGLE_RELATION_TIMEOUT`**: Timeout in seconds for single-relation queries (default 600)
 - **`OVERPASS_RETRIES_PER_ENDPOINT`**: Retries per endpoint
 - **`OVERPASS_BACKOFF_SECONDS`**: Base backoff between retries
 - **`CONTINUE_ON_OVERPASS_ERROR`**: Continue on JSON validation failure
