@@ -206,10 +206,10 @@ EOF
  return 0
 }
 
-# Releases lock file
+# Releases lock file (safe when LOCK is unset, e.g. after Planet load failure path)
 function __release_lock {
  __log_start
- if [[ -f "${LOCK}" ]]; then
+ if [[ -n "${LOCK:-}" ]] && [[ -f "${LOCK}" ]]; then
   exec 8>&-
   rm -f "${LOCK}"
   __logd "Lock file released"
@@ -1076,6 +1076,10 @@ function __process_api_data {
    __loge "Planet base load failed with exit code: ${PLANET_BASE_EXIT_CODE}"
    __loge "Check processPlanetNotes.sh logs for details"
    __loge "Failed execution marker: /tmp/processPlanetNotes_failed_execution"
+   # Reinitialize directories so next cycle has TMP_DIR, LOCK, LOCK_DIR set (avoids unbound variable on exit/cleanup)
+   __logd "Reinitializing directories after Planet base load failure"
+   __init_directories "${BASENAME}"
+   DAEMON_SHUTDOWN_FLAG="${LOCK_DIR}/${BASENAME}_shutdown"
    __log_finish
    return 1
   fi
@@ -1195,6 +1199,10 @@ function __process_api_data {
       CURRENT_USER=$(whoami 2> /dev/null || echo 'unknown')
       __loge "Current user: ${CURRENT_USER}"
      fi
+     # Reinitialize directories so next cycle has TMP_DIR, LOCK, LOCK_DIR set
+     __logd "Reinitializing directories after Planet sync failure"
+     __init_directories "${BASENAME}"
+     DAEMON_SHUTDOWN_FLAG="${LOCK_DIR}/${BASENAME}_shutdown"
      __log_finish
      return 1
     fi
@@ -1454,12 +1462,12 @@ function __daemon_loop {
  __log_finish
 }
 
-# Cleanup on exit
+# Cleanup on exit (safe when LOCK/LOCK_DIR were unset after Planet load failure)
 function __daemon_cleanup {
  __log_start
  __logi "=== DAEMON CLEANUP ==="
  __release_lock
- rm -f "${DAEMON_SHUTDOWN_FLAG}"
+ rm -f "${DAEMON_SHUTDOWN_FLAG:-}"
  __logi "Daemon stopped"
  __log_finish
 }
