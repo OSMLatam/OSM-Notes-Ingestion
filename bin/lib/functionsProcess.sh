@@ -3886,13 +3886,18 @@ function __overpass_download_with_endpoints() {
   # Intentional: check return value explicitly with if statement
   if __retry_file_operation "${OP}" "${LOCAL_MAX_RETRIES}" "${LOCAL_BASE_DELAY}" "${CL}" "true" "${ACTIVE_OVERPASS}"; then
    __logd "Download succeeded from endpoint=${ENDPOINT}"
-   # Validate JSON has elements key
+   # Validate JSON has non-empty elements and at least one geometry (way/relation)
    # shellcheck disable=SC2310
    # Intentional: check return value explicitly with if statement
    if __validate_json_with_element "${LOCAL_JSON_FILE}" "elements"; then
-    __logd "JSON validation succeeded from endpoint=${ENDPOINT}"
-    __log_finish
-    return 0
+    # Require at least one way (boundary geometry); relation-only stub => truncated response
+    if jq -e '[.elements[]? | select(.type == "way")] | length > 0' "${LOCAL_JSON_FILE}" > /dev/null 2>&1; then
+     __logd "JSON validation succeeded from endpoint=${ENDPOINT}"
+     __log_finish
+     return 0
+    else
+     __logw "Overpass response has no ways (incomplete/truncated) from endpoint=${ENDPOINT}; will try next endpoint"
+    fi
    else
     __logw "Invalid JSON from endpoint=${ENDPOINT}; will try next endpoint"
    fi
