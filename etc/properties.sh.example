@@ -76,6 +76,11 @@ declare OVERPASS_ENDPOINTS="${OVERPASS_ENDPOINTS:-${OVERPASS_INTERPRETER}}"
 # Large boundaries (e.g. Indonesia) may need 300-600s. Overpass default is often 180s.
 declare OVERPASS_SINGLE_RELATION_TIMEOUT="${OVERPASS_SINGLE_RELATION_TIMEOUT:-600}"
 
+# Swap safety: max number of existing countries allowed to be missing in countries_new
+# before refusing the swap. Effective threshold is max(this value, 5% of current count).
+# Default 10 allows a few Overpass failures (e.g. 3 Indonesia) but not mass loss.
+# declare SWAP_MAX_DELETED_THRESHOLD="${SWAP_MAX_DELETED_THRESHOLD:-10}"
+
 # Max retries per endpoint for a single boundary download attempt.
 declare OVERPASS_RETRIES_PER_ENDPOINT="${OVERPASS_RETRIES_PER_ENDPOINT:-7}"
 

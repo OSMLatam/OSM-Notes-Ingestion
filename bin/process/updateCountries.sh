@@ -52,8 +52,8 @@
 # For contributing: shellcheck -x -o all updateCountries.sh && shfmt -w -i 1 -sr -bn updateCountries.sh
 #
 # Author: Andres Gomez (AngocA)
-# Version: 2026-03-15
-VERSION="2026-03-15"
+# Version: 2026-03-16
+VERSION="2026-03-16"
 
 #set -xv
 # Fails when a variable is not initialized.
@@ -1031,7 +1031,8 @@ function __compareCountryGeometries {
  fi
 }
 
-# Safely swap countries_new to countries table
+# Safely swap countries_new to countries table.
+# Regression guard: do not swap if countries exists and countries_new has fewer rows.
 function __swapCountryTables {
  __log_start
  __logi "=== SWAPPING COUNTRIES_NEW TO COUNTRIES ==="
@@ -1046,6 +1047,45 @@ function __swapCountryTables {
   __loge "countries_new table is empty, cannot swap"
   __log_finish
   return 1
+ fi
+
+ # Regression guard: if countries table exists, refuse swap when too many existing
+ # country_id would be lost (same idea as compare_all_country_geometries 'deleted').
+ # Threshold: max(10, 5% of current count) so we allow a few failures (e.g. 3 Indonesia)
+ # but not mass loss.
+ local COUNTRIES_TABLE_EXISTS
+ COUNTRIES_TABLE_EXISTS=$(PGAPPNAME="${PGAPPNAME}" psql -d "${DBNAME}" -Atq -c "
+   SELECT EXISTS (
+     SELECT 1 FROM information_schema.tables
+     WHERE table_schema = 'public' AND table_name = 'countries'
+   );
+ " 2> /dev/null | grep -E '^[tf]$' | head -1 || echo "f")
+ if [[ "${COUNTRIES_TABLE_EXISTS}" == "t" ]]; then
+  local DELETED_COUNT
+  DELETED_COUNT=$(PGAPPNAME="${PGAPPNAME}" psql -d "${DBNAME}" -Atq -c "
+    SELECT COUNT(*) FROM countries c
+    WHERE NOT EXISTS (SELECT 1 FROM countries_new n WHERE n.country_id = c.country_id);
+  " 2> /dev/null | grep -E '^[0-9]+$' | head -1 || echo "0")
+  local COUNT_OLD
+  COUNT_OLD=$(PGAPPNAME="${PGAPPNAME}" psql -d "${DBNAME}" -Atq -c "
+    SELECT COUNT(*) FROM countries;
+  " 2> /dev/null | grep -E '^[0-9]+$' | head -1 || echo "0")
+  local MAX_DELETED="${SWAP_MAX_DELETED_THRESHOLD:-10}"
+  if [[ -n "${COUNT_OLD}" ]] && [[ "${COUNT_OLD}" -gt 0 ]]; then
+   local PCT_THRESHOLD
+   PCT_THRESHOLD=$(( (COUNT_OLD * 5 + 99) / 100 ))
+   if [[ "${PCT_THRESHOLD}" -gt "${MAX_DELETED}" ]]; then
+    MAX_DELETED="${PCT_THRESHOLD}"
+   fi
+  fi
+  if [[ -n "${DELETED_COUNT}" ]] && [[ "${DELETED_COUNT}" -gt "${MAX_DELETED}" ]]; then
+   __loge "Swap refused: ${DELETED_COUNT} existing countries would be lost (max allowed: ${MAX_DELETED})"
+   __log_finish
+   return 1
+  fi
+  if [[ -n "${DELETED_COUNT}" ]] && [[ "${DELETED_COUNT}" -gt 0 ]]; then
+   __logi "Swap safety: ${DELETED_COUNT} existing countries missing in countries_new (within threshold ${MAX_DELETED})"
+  fi
  fi
 
  __logi "countries_new has ${COUNT_NEW} countries, proceeding with swap..."
@@ -1611,9 +1651,13 @@ EOF
   # This allows processPlanet to complete quickly on first run
   __logi "Processing countries and maritimes data into countries_new..."
   __logi "Using backup if available (faster), otherwise downloading from Overpass..."
-  # shellcheck disable=SC2119
-  # __processCountries is called without arguments intentionally
-  __processCountries
+  # Do not let processCountries failure (e.g. "No successful downloads") abort the script:
+  # with set -e, a bare __processCountries would exit here and we would never run
+  # __processMaritimes or the swap, leaving data only in countries_new.
+  # shellcheck disable=SC2119,SC2310
+  if ! __processCountries; then
+   __logw "Some country downloads/imports failed (e.g. partial Overpass failures), continuing with maritimes and swap"
+  fi
   # Process maritimes, but don't fail if it errors (countries are more critical)
   # shellcheck disable=SC2119,SC2310
   # __processMaritimes is called without arguments intentionally, function is invoked in if condition intentionally
@@ -1744,9 +1788,11 @@ EOF
   # Force download from Overpass - don't use backup in update mode
   __logi "Processing countries and maritimes from Overpass into countries_new (update mode - always get latest geometries)..."
   export FORCE_OVERPASS_DOWNLOAD="true"
-  # shellcheck disable=SC2119
-  # __processCountries is called without arguments intentionally
-  __processCountries
+  # Do not let processCountries failure abort the script (same as in base mode, see comment there).
+  # shellcheck disable=SC2119,SC2310
+  if ! __processCountries; then
+   __logw "Some country downloads failed, continuing with maritimes and swap"
+  fi
   # Process maritimes, but don't fail if it errors (countries are more critical)
   # shellcheck disable=SC2119,SC2310
   # __processMaritimes is called without arguments intentionally, function is invoked in if condition intentionally

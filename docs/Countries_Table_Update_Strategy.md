@@ -192,6 +192,38 @@ Script to safely perform table swap.
 3. **Indexes**: Must be recreated after swap (or use INCLUDING ALL)
 4. **Dependencies**: Other tables/views that depend on `countries` must be updated
 
+## Why the automatic swap may not run
+
+If `countries_new` has data but `countries` stays empty, the script may have exited **before** reaching the swap step. This can happen when:
+
+- The script uses `set -e` (exit on first error). If `__processCountries` returns non-zero (e.g. "No successful downloads to import" when some Overpass downloads fail), the script exits and never runs `__processMaritimes` or the swap.
+- A fix (in `updateCountries.sh`) wraps the `__processCountries` call in `if ! __processCountries; then ... fi` so that a partial failure in countries does not abort the run; maritimes and the swap still execute.
+
+After deploying that fix, a full run from scratch (e.g. via processAPINotes daemon → processPlanetNotes --base → updateCountries --base) should complete the swap automatically. If you already have data only in `countries_new`, use the manual swap below.
+
+**Regression guard:** Before swapping, when `countries` exists the script counts how many existing `country_id` values would be **lost** (present in `countries` but missing in `countries_new`). It refuses the swap if that number exceeds a threshold: **max(10, 5% of current count)**. So a few failures (e.g. 3 Indonesia) are allowed, but not mass loss. Same idea as the geometry comparison’s "deleted" check in `compare_all_country_geometries`. You can override with `SWAP_MAX_DELETED_THRESHOLD` (e.g. in `etc/properties.sh`).
+
+## Manual swap
+
+When `countries_new` has rows but `countries` is empty or you want to apply the swap yourself, run the swap SQL as the database owner (e.g. `notes`):
+
+```bash
+cd /opt/osm-notes-ingestion
+sudo -u notes psql -d notes -v ON_ERROR_STOP=1 -f sql/process/processCountries_swapTables.sql
+```
+
+Or run the same logic in `psql`:
+
+```sql
+-- Ensure countries_new has data, then:
+DROP TABLE IF EXISTS countries_old CASCADE;
+ALTER TABLE countries RENAME TO countries_old;  -- (skip if countries does not exist)
+ALTER TABLE countries_new RENAME TO countries;
+-- Then recreate indexes (see processCountries_swapTables.sql for full steps).
+```
+
+After a successful swap, run any post-swap steps your project uses (e.g. `__maintainCountriesTable`, `__calculateInternationalWaters`), or run `updateCountries.sh --base` again so it completes from the point after the swap.
+
 ## Related Documentation
 
 - **[Documentation.md](./Documentation.md)**: System architecture overview

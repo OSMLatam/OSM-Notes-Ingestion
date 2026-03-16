@@ -7,7 +7,21 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Added
+
+- **Overpass single-relation timeout**: Configurable `OVERPASS_SINGLE_RELATION_TIMEOUT` (default 600s) for country/maritime boundary downloads; avoids default server timeout on large relations (e.g. Indonesia). Documented in `etc/properties.sh.example` and `bin/Environment_Variables.md`.
+- **Swap safety threshold**: `SWAP_MAX_DELETED_THRESHOLD` to cap how many existing countries may be missing in `countries_new` before refusing the swap; effective threshold is max(this value, 5% of current count). Documented in `etc/properties.sh.example` and `docs/Countries_Table_Update_Strategy.md`.
+
+### Changed
+
+- **updateCountries.sh continues on country failures**: Wrapped `__processCountries` in `if ! ... fi` so that when it returns non-zero (e.g. "No successful downloads to import"), the script still runs `__processMaritimes` and the swap instead of exiting due to `set -e`. Fixes the case where data remained only in `countries_new` and swap never ran.
+- **Swap regression guard**: Before swapping, the script now checks how many existing `country_id` would be lost (present in `countries` but missing in `countries_new`) and refuses the swap if that count exceeds max(10, 5% of current). Aligns with the "deleted" notion from `compare_all_country_geometries` and allows a few failures (e.g. 3 Indonesia) but not mass loss.
+- **Overpass response validation**: After download, require at least one element of type `way` in the Overpass JSON; relation-only (truncated) responses are rejected and the next endpoint is tried when using `OVERPASS_ENDPOINTS`.
+- **Documentation**: Installation_Dependencies (full cleanup as DB owner, manual swap reference), Cleanup_Integration (full cleanup in production, manual swap), Countries_Table_Update_Strategy (why automatic swap may not run, manual swap, regression guard), Environment_Variables (OVERPASS_SINGLE_RELATION_TIMEOUT, OVERPASS_ENDPOINTS), properties.sh.example (OVERPASS_ENDPOINTS, OVERPASS_SINGLE_RELATION_TIMEOUT, SWAP_MAX_DELETED_THRESHOLD).
+
 ### Fixed
+
+- **Daemon unbound variables**: When `processPlanetNotes.sh` failed (e.g. during base load), `TMP_DIR`, `LOCK_DIR`, and `LOCK` could be unset in the daemon, causing "unbound variable" errors in later cycles. Fixed by re-initializing these in failure branches and making `__release_lock` / `__daemon_cleanup` defensive when variables are unset (`processAPINotesDaemon.sh`).
 
 #### Country Assignment Bug Fix (2026-01-19)
 
