@@ -7,6 +7,8 @@
 # Author: Andres Gomez (AngocA)
 # Version: 2026-03-15
 VERSION="2026-03-15"
+# 2026-03-15: Planet download error handling: TMP_DIR existence/writability check;
+# clearer message when disk space validation fails (directory/permissions vs space).
 
 # shellcheck disable=SC2317,SC2155
 # NOTE: SC2154 warnings are expected as many variables are defined in sourced files
@@ -3253,12 +3255,28 @@ function __downloadPlanetNotes {
  # - CSV files generated: ~5 GB
  # - Safety margin (20%): ~3.4 GB
  # Total estimated: ~20 GB
+ # Ensure TMP_DIR exists and is writable (avoids misleading "insufficient space" when
+ # the real issue is missing directory or permissions)
+ if [[ ! -d "${TMP_DIR}" ]]; then
+  __loge "TMP_DIR does not exist: ${TMP_DIR}"
+  __handle_error_with_cleanup "${ERROR_GENERAL}" \
+   "TMP_DIR does not exist (check path and permissions): ${TMP_DIR}" \
+   "echo 'No cleanup needed - download not started'"
+ fi
+ if [[ ! -w "${TMP_DIR}" ]]; then
+  __loge "TMP_DIR is not writable: ${TMP_DIR}"
+  __handle_error_with_cleanup "${ERROR_GENERAL}" \
+   "TMP_DIR is not writable (check permissions): ${TMP_DIR}" \
+   "echo 'No cleanup needed - download not started'"
+ fi
+
  __logi "Validating disk space for Planet notes download..."
  # shellcheck disable=SC2310
  # Intentional: check return value explicitly with if statement
  if ! __check_disk_space "${TMP_DIR}" "20" "Planet notes download and processing"; then
-  __loge "Cannot proceed with Planet download due to insufficient disk space"
-  __handle_error_with_cleanup "${ERROR_GENERAL}" "Insufficient disk space for Planet download" \
+  __loge "Disk space validation failed. Check TMP_DIR exists, is writable, and has >= 20 GB free: ${TMP_DIR}"
+  __handle_error_with_cleanup "${ERROR_GENERAL}" \
+   "Disk space validation failed for Planet download (TMP_DIR: ${TMP_DIR}). Check directory exists, permissions, and at least 20 GB free." \
    "echo 'No cleanup needed - download not started'"
  fi
 

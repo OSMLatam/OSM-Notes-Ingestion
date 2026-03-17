@@ -19,7 +19,8 @@
 #
 # Author: Andres Gomez (AngocA)
 # Version: 2026-02-01
-VERSION="2026-02-01"
+VERSION="2026-03-15"
+# 2026-03-15: After Planet --base exit 0, verify countries table exists before reporting success.
 
 # IMPORTANT: This daemon sources processAPINotes.sh to reuse all its functions
 # The daemon adds daemon-specific functionality (looping, signal handling, etc.)
@@ -1040,7 +1041,6 @@ function __process_api_data {
   local PLANET_BASE_EXIT_CODE=$?
 
   if [[ ${PLANET_BASE_EXIT_CODE} -eq 0 ]]; then
-   __logi "Planet base load completed successfully"
    # Reinitialize directories after processPlanetNotes.sh execution
    # This is critical because we unset TMP_DIR, LOCK_DIR, etc. before
    # calling processPlanetNotes.sh to avoid lock conflicts, but these
@@ -1049,6 +1049,21 @@ function __process_api_data {
    __init_directories "${BASENAME}"
    # Update DAEMON_SHUTDOWN_FLAG path after reinitializing LOCK_DIR
    DAEMON_SHUTDOWN_FLAG="${LOCK_DIR}/${BASENAME}_shutdown"
+
+   # Verify base load actually created critical tables (avoids reporting success
+   # when processPlanetNotes exited 0 but countries table was not created)
+   local COUNTRIES_TABLE_EXISTS
+   COUNTRIES_TABLE_EXISTS=$(PGAPPNAME="${PGAPPNAME}" psql -d "${DBNAME}" -Atq -c \
+    "SELECT EXISTS (SELECT FROM information_schema.tables WHERE table_schema = 'public' AND table_name = 'countries');" \
+    2> /dev/null | grep -E '^[tf]$' | tail -1 || echo "f")
+   if [[ "${COUNTRIES_TABLE_EXISTS}" != "t" ]]; then
+    __loge "Planet base load reported exit 0 but countries table is missing - treating as failure"
+    __loge "Check processPlanetNotes.sh logs. Remove failed marker and rerun if appropriate: /tmp/processPlanetNotes_failed_execution"
+    __log_finish
+    return 1
+   fi
+
+   __logi "Planet base load completed successfully"
    # Ensure max_note_timestamp table exists after Planet load
    # This is critical because the table may not have been created during daemon_init
    # if base tables didn't exist at that time
