@@ -2,8 +2,10 @@
 
 # Boundary Processing Functions for OSM-Notes-profile
 # Author: Andres Gomez (AngocA)
-# Version: 2026-03-15
-VERSION="2026-03-15"
+# Version: 2026-03-20
+VERSION="2026-03-20"
+# 2026-03-20: New download flow — if all Overpass downloads fail but backup already
+#   filled countries/countries_new, continue (duplicate OSM relations / placeholders).
 
 # GitHub repository URL for boundaries data (can be overridden via environment variable)
 # Only set if not already declared (e.g., when sourced from another script)
@@ -3219,7 +3221,25 @@ function __processCountries_impl {
     __logw "Some imports failed, but continuing"
    fi
   else
-   __loge "No successful downloads to import"
+   # Overpass may list duplicate or placeholder country relations (same state, new IDs)
+   # that cannot be downloaded as polygons; backup may still hold the canonical
+   # boundary (e.g. Indonesia 304751) while "missing" IDs fail — do not abort.
+   local COUNTRIES_TABLE
+   COUNTRIES_TABLE=$(__get_countries_table_name)
+   local ROW_COUNT
+   ROW_COUNT=$(
+    PGAPPNAME="${PGAPPNAME:-}" psql -d "${DBNAME}" -Atq -c \
+     "SELECT COUNT(*) FROM ${COUNTRIES_TABLE};" 2> /dev/null \
+     | grep -E '^[0-9]+$' | head -1 || echo "0"
+   )
+   if [[ "${ROW_COUNT:-0}" -gt 0 ]]; then
+    __logw "No successful Overpass downloads in this phase, but ${COUNTRIES_TABLE} already contains ${ROW_COUNT} countries (e.g. from backup)."
+    __logw "This often happens when OSM has duplicate admin relations or placeholder boundaries; continuing."
+    __logi "New download flow completed (skipped failed downloads)"
+    __log_finish
+    return 0
+   fi
+   __loge "No successful downloads to import and ${COUNTRIES_TABLE} is empty"
    __log_finish
    return 1
   fi
