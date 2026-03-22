@@ -2,7 +2,7 @@
 title: "PostgreSQL Setup Guide"
 description: "This guide helps you configure PostgreSQL for the OSM-Notes-Ingestion project."
 version: "1.0.0"
-last_updated: "2026-01-25"
+last_updated: "2026-03-20"
 author: "AngocA"
 tags:
   - "installation"
@@ -42,6 +42,19 @@ sudo -u postgres createuser -d notes
 ```bash
 sudo -u postgres psql -c "GRANT ALL PRIVILEGES ON DATABASE \"notes\" TO notes;"
 ```
+
+### Server-side COPY for planet load
+
+Planet base load uses server-side `COPY ... FROM '/path'` (see
+`sql/process/processPlanetNotes_30_loadPartitionedSyncNotes.sql`). The application role
+must be allowed to read those files:
+
+```bash
+sudo -u postgres psql -c 'GRANT pg_read_server_files TO notes;'
+```
+
+If this is missing, you get `permission denied to COPY from a file`. See
+[Troubleshooting Guide - COPY permission](Troubleshooting_Guide.md#problem-copy-from-server-file-permission-denied).
 
 ### Step 4: Install Extensions
 
@@ -123,6 +136,12 @@ sudo apt-get install postgresql-postgis
 # Enable in database
    psql -U notes -d notes -c 'CREATE EXTENSION postgis;'
 ```
+
+### Issue 6: "permission denied to COPY from a file"
+
+**Problem**: The `notes` role (or your app user) cannot run server-side `COPY` from files.
+
+**Solution**: Grant `pg_read_server_files` as in [Server-side COPY for planet load](#server-side-copy-for-planet-load).
 
 ---
 

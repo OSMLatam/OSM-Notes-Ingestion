@@ -2,7 +2,7 @@
 title: "Troubleshooting Guide"
 description: "This comprehensive troubleshooting guide consolidates common problems and solutions for the"
 version: "1.0.0"
-last_updated: "2026-01-25"
+last_updated: "2026-03-20"
 author: "AngocA"
 tags:
   - "troubleshooting"
@@ -17,7 +17,7 @@ status: "active"
 
 # Troubleshooting Guide
 
-**Version:** 2025-12-08
+**Version:** 2026-03-20
 
 This comprehensive troubleshooting guide consolidates common problems and solutions for the
 OSM-Notes-Ingestion system. Problems are organized by category for easy navigation.
@@ -28,6 +28,7 @@ OSM-Notes-Ingestion system. Problems are organized by category for easy navigati
 - [Database Issues](#database-issues)
 - [API Processing Issues](#api-processing-issues)
 - [Planet Processing Issues](#planet-processing-issues)
+- [COPY from server file (`pg_read_server_files`)](#problem-copy-from-server-file-permission-denied)
 - [Network and Connectivity](#network-and-connectivity)
 - [Performance Issues](#performance-issues)
 - [Error Code Reference](#error-code-reference)
@@ -555,6 +556,35 @@ ping -c 3 planet.openstreetmap.org
    # curl can resume with -C flag
    curl -C - -o planet-notes-latest.osn.bz2 "https://planet.openstreetmap.org/planet/notes/planet-notes-latest.osn.bz2"
    ```
+
+### Problem: COPY From Server File Permission Denied
+
+**Symptoms:**
+
+- PostgreSQL error: `permission denied to COPY from a file`
+- Message mentioning role must be a superuser or have `pg_read_server_files`
+- `processPlanetNotes.sh --base` fails during load (SQL uses server-side `COPY`)
+
+**Cause:**
+
+The load step in `sql/process/processPlanetNotes_30_loadPartitionedSyncNotes.sql` uses
+server-side `COPY ... FROM '/path'`. That requires the PostgreSQL role to read files on
+the server as seen by the postmaster, not only table privileges.
+
+**Solutions:**
+
+1. **Grant the predefined role** (recommended for the application role, e.g. `notes`):
+
+   ```bash
+   sudo -u postgres psql -c 'GRANT pg_read_server_files TO notes;'
+   ```
+
+   Re-run `./bin/process/processPlanetNotes.sh --base` after fixing permissions.
+
+2. **Alternative (design change):** use client-side `\copy` or `COPY FROM STDIN` so the
+   role does not need `pg_read_server_files` (not the current implementation).
+
+**Related:** [PostgreSQL Setup - server-side COPY](./Postgresql_Setup.md#server-side-copy-for-planet-load).
 
 ### Problem: Out of Memory (OOM) During Processing
 
@@ -1181,6 +1211,64 @@ If processing was interrupted:
 3. **For sync mode:**
    - Re-run normally (will only process new notes)
    - Script handles partial processing automatically
+
+### Full planet base reload after fixing PostgreSQL COPY permission
+
+Use this when `processPlanetNotes.sh --base` failed with `COPY` / `pg_read_server_files`
+and you have already granted `pg_read_server_files` to the application role.
+
+1. **Stop the ingestion daemon** (if installed):
+
+   ```bash
+   sudo systemctl stop osm-notes-ingestion-daemon.service
+   ```
+
+2. **Stop stuck planet processes** (only if no real run should be active):
+
+   ```bash
+   sudo pkill -TERM -f 'processPlanetNotes\.sh'
+   # Wait; use -KILL only if a process does not exit
+   ```
+
+3. **Remove lock and failed markers** (adjust paths if your install uses others):
+
+   ```bash
+   sudo rm -f /var/run/osm-notes-ingestion/processPlanetNotes.lock \
+     /tmp/osm-notes-ingestion/locks/processPlanetNotes.lock \
+     /tmp/processPlanetNotes_failed_execution
+   ```
+
+4. **Clear planet work directories** (optional but recommended for a clean `--base`):
+
+   ```bash
+   sudo rm -rf /var/tmp/osm-notes-ingestion/processPlanetNotes_*
+   ```
+
+5. **Run base load** from the project directory, with logging:
+
+   ```bash
+   cd /opt/osm-notes-ingestion   # or your install path
+   export LOG_LEVEL=DEBUG
+   ./bin/process/processPlanetNotes.sh --base 2>&1 | tee /tmp/processPlanetNotes_relaunch.log
+   ```
+
+6. **Reload boundaries** if your operations require it:
+
+   ```bash
+   ./bin/process/updateCountries.sh --base
+   ```
+
+7. **Start the daemon again:**
+
+   ```bash
+   sudo systemctl start osm-notes-ingestion-daemon.service
+   ```
+
+8. **Verify:**
+
+   ```bash
+   psql -d "${DBNAME:-notes}" -c "SELECT COUNT(*) FROM notes;"
+   ```
 
 ### Database Recovery
 
