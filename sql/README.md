@@ -71,8 +71,9 @@ Scripts for processing and loading data, organized by processing type:
   - Purpose: Handles notes in international waters
   - Usage: Called during setup
 
-- **`processPlanetNotes_28_addInternationalWatersExamples.sql`**: Adds examples
-  - Purpose: Populates international waters examples
+- **`processPlanetNotes_28_addInternationalWatersExamples.sql`**: International waters polygons
+  - Purpose: For each ocean region box, subtracts countries clipped to that
+    region (no global union of all countries — faster, same coastal coverage)
   - Usage: Called after table creation
 
 **Data Loading** (Sequence: 41-45):
