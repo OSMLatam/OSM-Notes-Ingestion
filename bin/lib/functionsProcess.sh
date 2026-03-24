@@ -5,8 +5,8 @@
 # It loads all function modules for use across the project.
 #
 # Author: Andres Gomez (AngocA)
-# Version: 2026-03-15
-VERSION="2026-03-15"
+# Version: 2026-03-23
+VERSION="2026-03-23"
 # 2026-03-15: Planet download error handling: TMP_DIR existence/writability check;
 # clearer message when disk space validation fails (directory/permissions vs space).
 
@@ -3904,18 +3904,13 @@ function __overpass_download_with_endpoints() {
   # Intentional: check return value explicitly with if statement
   if __retry_file_operation "${OP}" "${LOCAL_MAX_RETRIES}" "${LOCAL_BASE_DELAY}" "${CL}" "true" "${ACTIVE_OVERPASS}"; then
    __logd "Download succeeded from endpoint=${ENDPOINT}"
-   # Validate JSON has non-empty elements and at least one geometry (way/relation)
+   # Validate JSON has non-empty elements.
    # shellcheck disable=SC2310
    # Intentional: check return value explicitly with if statement
    if __validate_json_with_element "${LOCAL_JSON_FILE}" "elements"; then
-    # Require at least one way (boundary geometry); relation-only stub => truncated response
-    if jq -e '[.elements[]? | select(.type == "way")] | length > 0' "${LOCAL_JSON_FILE}" > /dev/null 2>&1; then
-     __logd "JSON validation succeeded from endpoint=${ENDPOINT}"
-     __log_finish
-     return 0
-    else
-     __logw "Overpass response has no ways (incomplete/truncated) from endpoint=${ENDPOINT}; will try next endpoint"
-    fi
+    __logd "JSON validation succeeded from endpoint=${ENDPOINT}"
+    __log_finish
+    return 0
    else
     __logw "Invalid JSON from endpoint=${ENDPOINT}; will try next endpoint"
    fi
