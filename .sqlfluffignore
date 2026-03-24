@@ -1,0 +1,5 @@
+sql/analysis/analyze_api_insertion_performance.sql
+sql/analysis/analyze_country_assignment_performance.sql
+sql/analysis/analyze_partition_loading_performance.sql
+sql/functionsProcess_31_loadsBackupNoteLocation.sql
+sql/functionsProcess_35_assignCountryToNotesChunk.sql
