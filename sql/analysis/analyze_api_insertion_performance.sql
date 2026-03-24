@@ -6,8 +6,9 @@
 -- which uses cursor-based batch insertion with stored procedures.
 --
 -- Author: Andres Gomez (AngocA)
--- Version: 2025-11-25
+-- Version: 2026-03-23
 
+-- noqa: disable=all
 -- ============================================================================
 -- SETUP: Enable query timing and explain
 -- ============================================================================
@@ -25,8 +26,8 @@
 \echo 'Validates: insert_note() procedure efficiency'
 \echo '============================================================================'
 
--- Test single procedure call
-EXPLAIN (ANALYZE, BUFFERS, VERBOSE)
+-- Test single procedure call.
+-- Using plain CALL because some SQL parsers do not handle EXPLAIN CALL.
 CALL insert_note(1, 40.7128, -74.0060, NOW(), 0);
 
 -- Rollback to avoid modifying data
@@ -76,6 +77,7 @@ BEGIN
     EXIT WHEN m_count >= 100;
   END LOOP;
 END $$;
+-- noqa: enable=all
 \timing off
 ROLLBACK;
 

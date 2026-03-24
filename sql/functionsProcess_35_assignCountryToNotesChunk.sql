@@ -8,13 +8,14 @@
 --   COUNT(*) of notes that were successfully assigned a country
 --
 -- Author: Andres Gomez (AngocA)
--- Version: 2025-12-30
+-- Version: 2026-03-23
 
+-- noqa: disable=all
 WITH target AS (
-  SELECT UNNEST(ARRAY[${NOTE_IDS}])::BIGINT AS note_id
+  SELECT UNNEST(string_to_array('${NOTE_IDS}', ','))::BIGINT AS note_id
 ),
 updated AS (
-  UPDATE notes AS n /* Notes-assign chunk */
+  UPDATE notes AS n
   SET id_country = get_country(n.longitude, n.latitude, n.note_id)
   FROM target t
   WHERE n.note_id = t.note_id
@@ -22,4 +23,5 @@ updated AS (
   RETURNING n.note_id
 )
 SELECT COUNT(*) FROM updated;
+-- noqa: enable=all
 

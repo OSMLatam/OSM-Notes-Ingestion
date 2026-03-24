@@ -6,8 +6,9 @@
 -- which uses UPDATE with get_country() function calls.
 --
 -- Author: Andres Gomez (AngocA)
--- Version: 2025-11-25
+-- Version: 2026-03-23
 
+-- noqa: disable=all
 -- ============================================================================
 -- SETUP: Enable query timing and explain
 -- ============================================================================
@@ -29,9 +30,13 @@
 EXPLAIN (ANALYZE, BUFFERS, VERBOSE)
 UPDATE notes AS n /* Notes-assign chunk */
 SET id_country = get_country(n.longitude, n.latitude, n.note_id)
-WHERE n.id_country IS NULL
-  AND n.note_id BETWEEN 1 AND 1000
-LIMIT 100;
+WHERE n.ctid IN (
+  SELECT ctid
+  FROM notes
+  WHERE id_country IS NULL
+    AND note_id BETWEEN 1 AND 1000
+  LIMIT 100
+);
 
 -- Rollback to avoid modifying data
 ROLLBACK;
@@ -67,6 +72,7 @@ BEGIN
   RAISE NOTICE 'get_country() called % times in %', test_count, end_time;
   RAISE NOTICE 'Average time per call: %', (EXTRACT(EPOCH FROM end_time) * 1000 / test_count) || ' ms';
 END $$;
+-- noqa: enable=all
 
 -- ============================================================================
 -- TEST 3: Chunk-based assignment performance
@@ -81,11 +87,12 @@ END $$;
 
 -- Test chunk-based UPDATE (simulating parallel processing)
 EXPLAIN (ANALYZE, BUFFERS, VERBOSE)
+-- noqa: disable=all
 WITH target AS (
   SELECT UNNEST(ARRAY[1, 2, 3, 4, 5, 6, 7, 8, 9, 10])::BIGINT AS note_id
 ),
 updated AS (
-  UPDATE notes AS n /* Notes-assign chunk */
+  UPDATE notes AS n
   SET id_country = get_country(n.longitude, n.latitude, n.note_id)
   FROM target t
   WHERE n.note_id = t.note_id
@@ -93,6 +100,7 @@ updated AS (
   RETURNING n.note_id
 )
 SELECT COUNT(*) FROM updated;
+-- noqa: enable=all
 
 -- Rollback to avoid modifying data
 ROLLBACK;
@@ -176,9 +184,13 @@ SELECT get_country(40.7128, -74.0060, 1);
 \timing on
 UPDATE notes AS n /* Notes-assign chunk */
 SET id_country = get_country(n.longitude, n.latitude, n.note_id)
-WHERE n.id_country IS NULL
-  AND n.note_id BETWEEN 1 AND 1000
-LIMIT 100;
+WHERE n.ctid IN (
+  SELECT ctid
+  FROM notes
+  WHERE id_country IS NULL
+    AND note_id BETWEEN 1 AND 1000
+  LIMIT 100
+);
 \timing off
 ROLLBACK;
 

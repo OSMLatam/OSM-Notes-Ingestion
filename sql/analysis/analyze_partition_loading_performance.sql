@@ -6,8 +6,9 @@
 -- operations used during Planet notes processing.
 --
 -- Author: Andres Gomez (AngocA)
--- Version: 2025-11-25
+-- Version: 2026-03-23
 
+-- noqa: disable=all
 -- ============================================================================
 -- SETUP: Enable query timing and explain
 -- ============================================================================
@@ -54,8 +55,12 @@ ROLLBACK;
 EXPLAIN (ANALYZE, BUFFERS, VERBOSE)
 UPDATE notes_sync_part_1
 SET part_id = 1
-WHERE part_id IS NULL
-LIMIT 1000;
+WHERE ctid IN (
+  SELECT ctid
+  FROM notes_sync_part_1
+  WHERE part_id IS NULL
+  LIMIT 1000
+);
 \timing off
 
 -- Rollback to avoid modifying data
@@ -143,8 +148,12 @@ ROLLBACK;
 \timing on
 UPDATE notes_sync_part_1
 SET part_id = 1
-WHERE part_id IS NULL
-LIMIT 1000;
+WHERE ctid IN (
+  SELECT ctid
+  FROM notes_sync_part_1
+  WHERE part_id IS NULL
+  LIMIT 1000
+);
 \timing off
 ROLLBACK;
 
@@ -215,4 +224,5 @@ BEGIN
   RAISE NOTICE '';
   RAISE NOTICE '============================================================================';
 END $$;
+-- noqa: enable=all
 

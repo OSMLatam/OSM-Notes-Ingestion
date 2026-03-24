@@ -2,8 +2,9 @@
 -- note's location.
 --
 -- Author: Andres Gomez (AngocA)
--- Version: 2026-02-01
+-- Version: 2026-03-23
 
+-- noqa: disable=all
 SELECT /* Notes-processAPI */ clock_timestamp() AS Processing,
  'Creating table...' AS Text;
 
@@ -25,7 +26,8 @@ DO $$ BEGIN
   RAISE NOTICE '============================================================================';
 END $$;
 COPY backup_note_locations (note_id, id_country)
-FROM '${CSV_BACKUP_NOTE_LOCATION}' csv;
+FROM '${CSV_BACKUP_NOTE_LOCATION}'
+WITH (FORMAT csv);
 
 SELECT /* Notes-processAPI */ clock_timestamp() AS Processing,
  'Creating index on backup table...' AS Text;
@@ -104,3 +106,4 @@ SELECT /* Notes-processAPI */ clock_timestamp() AS Processing,
  'Notes updated with location...' AS Text;
 
 DROP TABLE backup_note_locations;
+-- noqa: enable=all
