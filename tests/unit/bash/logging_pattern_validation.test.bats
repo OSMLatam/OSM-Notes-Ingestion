@@ -3,7 +3,7 @@
 # Unit tests for Logging Pattern Validation
 # Test file: logging_pattern_validation.test.bats
 # Author: Andres Gomez (AngocA)
-# Version: 2025-08-13
+# Version: 2026-03-23
 
 load "../../test_helper.bash"
 
@@ -17,7 +17,7 @@ setup() {
 
  # Reset logger state
  __log_fd=""
- __set_log_level "INFO"
+ __set_log_level "DEBUG"
 }
 
 teardown() {
