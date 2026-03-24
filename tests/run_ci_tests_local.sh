@@ -2,7 +2,7 @@
 
 # Script to run GitHub Actions CI tests locally
 # Author: Andres Gomez (AngocA)
-# Version: 2025-12-07
+# Version: 2026-03-24
 
 set -euo pipefail
 
@@ -48,48 +48,53 @@ USE_ACT="${USE_ACT:-auto}"
 
 if [[ "${USE_ACT}" == "auto" ]] || [[ "${USE_ACT}" == "true" ]]; then
  # Check if act is installed
- if command -v act >/dev/null 2>&1; then
+ if command -v act > /dev/null 2>&1; then
   # Check if act is available
   export PATH="${HOME}/.local/bin:${PATH}"
   if command -v act &> /dev/null || [[ -f "${HOME}/.local/bin/act" ]]; then
    log_info "Using act to run GitHub Actions workflows..."
    log_info "To run tests manually instead, set USE_ACT=false"
-   
+
    # Parse arguments for act
    ACT_JOB_NAME=""
    ACT_EVENT="push"
    ACT_ARGS=()
-   
+
    # Check for job name in arguments
    while [[ $# -gt 0 ]]; do
     case "${1}" in
-     --job | -j)
-      ACT_JOB_NAME="${2:-}"
-      shift 2
-      ;;
-     --event | -e)
-      ACT_EVENT="${2:-}"
-      shift 2
-      ;;
-     --all | -a)
-      ACT_JOB_NAME="all"
-      shift
-      ;;
-     *)
-      if [[ -z "${ACT_JOB_NAME}" ]]; then
-       ACT_JOB_NAME="${1}"
-      else
-       ACT_ARGS+=("${1}")
-      fi
-      shift
-      ;;
+    --job | -j)
+     ACT_JOB_NAME="${2:-}"
+     shift 2
+     ;;
+    --event | -e)
+     ACT_EVENT="${2:-}"
+     shift 2
+     ;;
+    --all | -a)
+     ACT_JOB_NAME="all"
+     shift
+     ;;
+    *)
+     if [[ -z "${ACT_JOB_NAME}" ]]; then
+      ACT_JOB_NAME="${1}"
+     else
+      ACT_ARGS+=("${1}")
+     fi
+     shift
+     ;;
     esac
    done
-   
+
    # Run with act directly
-   log_info "Running act with job: ${ACT_JOB_NAME:-quick-checks}"
+   # Default to quick-checks to avoid running all jobs in parallel locally,
+   # which can collide on PostgreSQL port mappings.
+   if [[ -z "${ACT_JOB_NAME}" ]]; then
+    ACT_JOB_NAME="quick-checks"
+   fi
+   log_info "Running act with job: ${ACT_JOB_NAME}"
    log_info "Event: ${ACT_EVENT}"
-   
+
    # Create event JSON file
    cat > /tmp/act_event.json << 'EOF'
 {
@@ -98,14 +103,14 @@ if [[ "${USE_ACT}" == "auto" ]] || [[ "${USE_ACT}" == "true" ]]; then
   }
 }
 EOF
-   
+
    # Build act command as array
    ACT_CMD_ARRAY=(
-     act
-     -W .github/workflows/ci.yml
-     --eventpath /tmp/act_event.json
+    act
+    -W .github/workflows/ci.yml
+    --eventpath /tmp/act_event.json
    )
-   
+
    if [[ -n "${ACT_JOB_NAME}" ]] && [[ "${ACT_JOB_NAME}" != "all" ]]; then
     ACT_CMD_ARRAY+=(--job "${ACT_JOB_NAME}")
    else
@@ -116,15 +121,15 @@ EOF
     log_info "To avoid conflicts, run specific jobs: --job quick-checks"
     log_info "Or use USE_ACT=false to run tests without act simulation"
    fi
-   
+
    # Add any additional arguments
    if [[ ${#ACT_ARGS[@]} -gt 0 ]]; then
     ACT_CMD_ARRAY+=("${ACT_ARGS[@]}")
    fi
-   
+
    log_info "Executing: ${ACT_CMD_ARRAY[*]}"
    "${ACT_CMD_ARRAY[@]}"
-   
+
    exit $?
   else
    log_warning "act not found, falling back to manual test execution"
@@ -222,6 +227,7 @@ if ! command -v node > /dev/null 2>&1; then
  log_warning "Node.js not found"
  if command -v nvm > /dev/null 2>&1; then
   log_info "Using nvm to install Node.js..."
+  # shellcheck disable=SC1090,SC1091
   source ~/.nvm/nvm.sh || true
   nvm install 20 || nvm use 20 || true
  else

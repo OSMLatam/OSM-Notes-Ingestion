@@ -52,8 +52,8 @@
 # For contributing: shellcheck -x -o all updateCountries.sh && shfmt -w -i 1 -sr -bn updateCountries.sh
 #
 # Author: Andres Gomez (AngocA)
-# Version: 2026-03-16
-VERSION="2026-03-16"
+# Version: 2026-03-24
+VERSION="2026-03-24"
 
 #set -xv
 # Fails when a variable is not initialized.
@@ -1073,7 +1073,7 @@ function __swapCountryTables {
   local MAX_DELETED="${SWAP_MAX_DELETED_THRESHOLD:-10}"
   if [[ -n "${COUNT_OLD}" ]] && [[ "${COUNT_OLD}" -gt 0 ]]; then
    local PCT_THRESHOLD
-   PCT_THRESHOLD=$(( (COUNT_OLD * 5 + 99) / 100 ))
+   PCT_THRESHOLD=$(((COUNT_OLD * 5 + 99) / 100))
    if [[ "${PCT_THRESHOLD}" -gt "${MAX_DELETED}" ]]; then
     MAX_DELETED="${PCT_THRESHOLD}"
    fi
