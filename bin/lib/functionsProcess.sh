@@ -5,8 +5,8 @@
 # It loads all function modules for use across the project.
 #
 # Author: Andres Gomez (AngocA)
-# Version: 2026-03-23
-VERSION="2026-03-23"
+# Version: 2026-03-24
+VERSION="2026-03-24"
 # 2026-03-15: Planet download error handling: TMP_DIR existence/writability check;
 # clearer message when disk space validation fails (directory/permissions vs space).
 
@@ -623,7 +623,9 @@ function __splitXmlForParallelSafe() {
 # Note location backup file
 # Only set if not already declared (e.g., when sourced from another script)
 if ! declare -p CSV_BACKUP_NOTE_LOCATION > /dev/null 2>&1; then
- declare -r CSV_BACKUP_NOTE_LOCATION="/tmp/noteLocation.csv"
+ # Not readonly: __getLocationNotes_impl reassigns to TMP_DIR (avoids /tmp
+ # collisions and permission errors when another user owns /tmp/noteLocation.csv).
+ declare CSV_BACKUP_NOTE_LOCATION="/tmp/noteLocation.csv"
 fi
 if ! declare -p CSV_BACKUP_NOTE_LOCATION_COMPRESSED > /dev/null 2>&1; then
  declare -r CSV_BACKUP_NOTE_LOCATION_COMPRESSED="${DATA_DIR:-${SCRIPT_BASE_DIRECTORY}/data}/noteLocation.csv.zip"

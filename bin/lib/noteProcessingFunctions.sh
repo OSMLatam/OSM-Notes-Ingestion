@@ -2,9 +2,11 @@
 
 # Note Processing Functions for OSM-Notes-profile
 # Author: Andres Gomez (AngocA)
-# Version: 2026-02-01
+# Version: 2026-03-24
 # shellcheck disable=SC2034
-VERSION="2026-02-01"
+# 2026-03-24: Extract noteLocation.csv under TMP_DIR (not fixed /tmp) to avoid
+# permission errors when another user owns /tmp/noteLocation.csv.
+VERSION="2026-03-24"
 
 # shellcheck disable=SC2317,SC2155,SC2034
 
@@ -173,13 +175,23 @@ function __getLocationNotes_impl {
  fi
 
  __logi "Extracting notes backup."
+ # Extract under this run's TMP_DIR (owned by notes). A fixed /tmp path can
+ # fail if another user left noteLocation.csv there (unzip cannot replace).
+ local EXTRACT_DIR="${TMP_DIR:-}"
+ if [[ -z "${EXTRACT_DIR}" ]] || [[ ! -d "${EXTRACT_DIR}" ]]; then
+  __loge "TMP_DIR is unset or missing; cannot extract note location backup."
+  __log_finish
+  return 1
+ fi
+ CSV_BACKUP_NOTE_LOCATION="${EXTRACT_DIR}/noteLocation.csv"
+ export CSV_BACKUP_NOTE_LOCATION
  rm -f "${CSV_BACKUP_NOTE_LOCATION}"
- unzip "${CSV_BACKUP_NOTE_LOCATION_COMPRESSED}" -d /tmp
+ # -o: overwrite without prompt (non-interactive; avoids hang under systemd)
+ unzip -o "${CSV_BACKUP_NOTE_LOCATION_COMPRESSED}" -d "${EXTRACT_DIR}"
  chmod 666 "${CSV_BACKUP_NOTE_LOCATION}"
 
  __logi "Importing notes location from backup CSV..."
  __logi "This COPY operation may take several minutes for large datasets."
- export CSV_BACKUP_NOTE_LOCATION
  # shellcheck disable=SC2016
  # shellcheck disable=SC2154
  # POSTGRES_32_UPLOAD_NOTE_LOCATION is defined in pathConfigurationFunctions.sh
