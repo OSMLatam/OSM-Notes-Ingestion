@@ -39,8 +39,8 @@
 # For contributing: shellcheck -x -o all processAPINotes.sh && shfmt -w -i 1 -sr -bn processAPINotes.sh
 #
 # Author: Andres Gomez (AngocA)
-# Version: 2026-01-17
-VERSION="2026-01-17"
+# Version: 2026-03-24
+VERSION="2026-03-24"
 
 #set -xv
 # Fails when a variable is not initialized.
@@ -1377,7 +1377,7 @@ function __processApiXmlSequential {
 
  # Process notes with AWK (fast and dependency-free)
  __logd "Processing notes with AWK: ${XML_FILE} -> ${SEQ_OUTPUT_NOTES_FILE}"
- awk -f "${SCRIPT_BASE_DIRECTORY}/awk/extract_notes.awk" "${XML_FILE}" > "${SEQ_OUTPUT_NOTES_FILE}"
+ gawk -f "${SCRIPT_BASE_DIRECTORY}/awk/extract_notes.awk" "${XML_FILE}" > "${SEQ_OUTPUT_NOTES_FILE}"
  if [[ ! -f "${SEQ_OUTPUT_NOTES_FILE}" ]]; then
   __loge "Notes CSV file was not created: ${SEQ_OUTPUT_NOTES_FILE}"
   __log_finish
@@ -1386,7 +1386,7 @@ function __processApiXmlSequential {
 
  # Process comments with AWK (fast and dependency-free)
  __logd "Processing comments with AWK: ${XML_FILE} -> ${SEQ_OUTPUT_COMMENTS_FILE}"
- awk -f "${SCRIPT_BASE_DIRECTORY}/awk/extract_comments.awk" "${XML_FILE}" > "${SEQ_OUTPUT_COMMENTS_FILE}"
+ gawk -f "${SCRIPT_BASE_DIRECTORY}/awk/extract_comments.awk" "${XML_FILE}" > "${SEQ_OUTPUT_COMMENTS_FILE}"
  if [[ ! -f "${SEQ_OUTPUT_COMMENTS_FILE}" ]]; then
   __loge "Comments CSV file was not created: ${SEQ_OUTPUT_COMMENTS_FILE}"
   __log_finish
@@ -1395,7 +1395,7 @@ function __processApiXmlSequential {
 
  # Process text comments with AWK (fast and dependency-free)
  __logd "Processing text comments with AWK: ${XML_FILE} -> ${SEQ_OUTPUT_TEXT_FILE}"
- awk -f "${SCRIPT_BASE_DIRECTORY}/awk/extract_comment_texts.awk" "${XML_FILE}" > "${SEQ_OUTPUT_TEXT_FILE}"
+ gawk -f "${SCRIPT_BASE_DIRECTORY}/awk/extract_comment_texts.awk" "${XML_FILE}" > "${SEQ_OUTPUT_TEXT_FILE}"
  if [[ ! -f "${SEQ_OUTPUT_TEXT_FILE}" ]]; then
   __logw "Text comments CSV file was not created, generating empty file to continue: ${SEQ_OUTPUT_TEXT_FILE}"
   : > "${SEQ_OUTPUT_TEXT_FILE}"

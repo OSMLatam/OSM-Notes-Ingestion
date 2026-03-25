@@ -37,8 +37,8 @@
 # * shfmt -w -i 1 -sr -bn processCheckPlanetNotes.sh
 #
 # Author: Andres Gomez (AngocA)
-# Version: 2026-01-20
-VERSION="2026-01-20"
+# Version: 2026-03-24
+VERSION="2026-03-24"
 
 #set -xv
 # Fails when a variable is not initialized.
@@ -220,7 +220,7 @@ function __generateCheckCsvFiles {
 
  # Process notes with AWK (fast and dependency-free)
  __logd "Processing notes with AWK: ${XML_FILE} -> ${OUTPUT_NOTES_FILE}"
- awk -f "${SCRIPT_BASE_DIRECTORY}/awk/extract_notes.awk" "${XML_FILE}" > "${OUTPUT_NOTES_FILE}"
+ gawk -f "${SCRIPT_BASE_DIRECTORY}/awk/extract_notes.awk" "${XML_FILE}" > "${OUTPUT_NOTES_FILE}"
  if [[ ! -f "${OUTPUT_NOTES_FILE}" ]]; then
   __loge "Notes CSV file was not created: ${OUTPUT_NOTES_FILE}"
   __log_finish
@@ -229,7 +229,7 @@ function __generateCheckCsvFiles {
 
  # Process comments with AWK (fast and dependency-free)
  __logd "Processing comments with AWK: ${XML_FILE} -> ${OUTPUT_NOTE_COMMENTS_FILE}"
- awk -f "${SCRIPT_BASE_DIRECTORY}/awk/extract_comments.awk" "${XML_FILE}" > "${OUTPUT_NOTE_COMMENTS_FILE}"
+ gawk -f "${SCRIPT_BASE_DIRECTORY}/awk/extract_comments.awk" "${XML_FILE}" > "${OUTPUT_NOTE_COMMENTS_FILE}"
  if [[ ! -f "${OUTPUT_NOTE_COMMENTS_FILE}" ]]; then
   __loge "Comments CSV file was not created: ${OUTPUT_NOTE_COMMENTS_FILE}"
   __log_finish
@@ -238,7 +238,7 @@ function __generateCheckCsvFiles {
 
  # Process text comments with AWK (fast and dependency-free)
  __logd "Processing text comments with AWK: ${XML_FILE} -> ${OUTPUT_TEXT_COMMENTS_FILE}"
- awk -f "${SCRIPT_BASE_DIRECTORY}/awk/extract_comment_texts.awk" "${XML_FILE}" > "${OUTPUT_TEXT_COMMENTS_FILE}"
+ gawk -f "${SCRIPT_BASE_DIRECTORY}/awk/extract_comment_texts.awk" "${XML_FILE}" > "${OUTPUT_TEXT_COMMENTS_FILE}"
  if [[ ! -f "${OUTPUT_TEXT_COMMENTS_FILE}" ]]; then
   __logw "Text comments CSV file was not created, generating empty file to continue: ${OUTPUT_TEXT_COMMENTS_FILE}"
   : > "${OUTPUT_TEXT_COMMENTS_FILE}"

@@ -1221,7 +1221,7 @@ function __processApiXmlPart() {
 
  # Process notes with AWK (fast and dependency-free)
  __logd "Processing notes with AWK: ${XML_PART} -> ${OUTPUT_NOTES_PART}"
- awk -f "${SCRIPT_BASE_DIRECTORY}/awk/extract_notes.awk" "${XML_PART}" > "${OUTPUT_NOTES_PART}"
+ gawk -f "${SCRIPT_BASE_DIRECTORY}/awk/extract_notes.awk" "${XML_PART}" > "${OUTPUT_NOTES_PART}"
  if [[ ! -f "${OUTPUT_NOTES_PART}" ]]; then
   __loge "Notes CSV file was not created: ${OUTPUT_NOTES_PART}"
   __log_finish
@@ -1230,7 +1230,7 @@ function __processApiXmlPart() {
 
  # Process comments with AWK (fast and dependency-free)
  __logd "Processing comments with AWK: ${XML_PART} -> ${OUTPUT_COMMENTS_PART}"
- awk -f "${SCRIPT_BASE_DIRECTORY}/awk/extract_comments.awk" "${XML_PART}" > "${OUTPUT_COMMENTS_PART}"
+ gawk -f "${SCRIPT_BASE_DIRECTORY}/awk/extract_comments.awk" "${XML_PART}" > "${OUTPUT_COMMENTS_PART}"
  if [[ ! -f "${OUTPUT_COMMENTS_PART}" ]]; then
   __loge "Comments CSV file was not created: ${OUTPUT_COMMENTS_PART}"
   __log_finish
@@ -1239,7 +1239,7 @@ function __processApiXmlPart() {
 
  # Process text comments with AWK (fast and dependency-free)
  __logd "Processing text comments with AWK: ${XML_PART} -> ${OUTPUT_TEXT_PART}"
- awk -f "${SCRIPT_BASE_DIRECTORY}/awk/extract_comment_texts.awk" "${XML_PART}" > "${OUTPUT_TEXT_PART}"
+ gawk -f "${SCRIPT_BASE_DIRECTORY}/awk/extract_comment_texts.awk" "${XML_PART}" > "${OUTPUT_TEXT_PART}"
  if [[ ! -f "${OUTPUT_TEXT_PART}" ]]; then
   __logw "Text comments CSV file was not created, generating empty file to continue: ${OUTPUT_TEXT_PART}"
   : > "${OUTPUT_TEXT_PART}"
@@ -1564,7 +1564,7 @@ function __processPlanetXmlPart() {
 
  # Process notes with AWK (fast and dependency-free)
  __logd "Processing notes with AWK: ${XML_PART} -> ${OUTPUT_NOTES_PART}"
- awk -f "${SCRIPT_BASE_DIRECTORY}/awk/extract_notes.awk" "${XML_PART}" > "${OUTPUT_NOTES_PART}"
+ gawk -f "${SCRIPT_BASE_DIRECTORY}/awk/extract_notes.awk" "${XML_PART}" > "${OUTPUT_NOTES_PART}"
  if [[ ! -f "${OUTPUT_NOTES_PART}" ]]; then
   __loge "Notes CSV file was not created: ${OUTPUT_NOTES_PART}"
   __log_finish
@@ -1577,7 +1577,7 @@ function __processPlanetXmlPart() {
 
  # Process comments with AWK (fast and dependency-free)
  __logd "Processing comments with AWK: ${XML_PART} -> ${OUTPUT_COMMENTS_PART}"
- awk -f "${SCRIPT_BASE_DIRECTORY}/awk/extract_comments.awk" "${XML_PART}" > "${OUTPUT_COMMENTS_PART}"
+ gawk -f "${SCRIPT_BASE_DIRECTORY}/awk/extract_comments.awk" "${XML_PART}" > "${OUTPUT_COMMENTS_PART}"
  if [[ ! -f "${OUTPUT_COMMENTS_PART}" ]]; then
   __loge "Comments CSV file was not created: ${OUTPUT_COMMENTS_PART}"
   __log_finish
@@ -1590,7 +1590,7 @@ function __processPlanetXmlPart() {
 
  # Process text comments with AWK (fast and dependency-free)
  __logd "Processing text comments with AWK: ${XML_PART} -> ${OUTPUT_TEXT_PART}"
- awk -f "${SCRIPT_BASE_DIRECTORY}/awk/extract_comment_texts.awk" "${XML_PART}" > "${OUTPUT_TEXT_PART}"
+ gawk -f "${SCRIPT_BASE_DIRECTORY}/awk/extract_comment_texts.awk" "${XML_PART}" > "${OUTPUT_TEXT_PART}"
  if [[ ! -f "${OUTPUT_TEXT_PART}" ]]; then
   __logw "Text comments CSV file was not created, generating empty file to continue: ${OUTPUT_TEXT_PART}"
   : > "${OUTPUT_TEXT_PART}"

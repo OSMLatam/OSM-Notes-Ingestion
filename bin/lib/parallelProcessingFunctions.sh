@@ -4,7 +4,7 @@
 # Description: Centralized parallel processing functions with resource management and retry logic
 #
 # Author: Andres Gomez (AngocA)
-# Version: 2025-12-07
+# Version: 2026-03-24
 
 # Load properties to ensure all required variables are available
 # Only load production properties if we're not in a test environment
@@ -1605,7 +1605,7 @@ function __processApiXmlPart() {
 
  # Process notes with AWK
  __logd "Processing notes with AWK: ${XML_PART} -> ${OUTPUT_NOTES_PART}"
- if ! awk -f "${SCRIPT_BASE_DIRECTORY}/awk/extract_notes.awk" "${XML_PART}" > "${OUTPUT_NOTES_PART}"; then
+ if ! gawk -f "${SCRIPT_BASE_DIRECTORY}/awk/extract_notes.awk" "${XML_PART}" > "${OUTPUT_NOTES_PART}"; then
   __loge "Notes CSV file was not created: ${OUTPUT_NOTES_PART}"
   __log_finish
   return 1
@@ -1619,7 +1619,7 @@ function __processApiXmlPart() {
 
  # Process comments with AWK
  __logd "Processing comments with AWK: ${XML_PART} -> ${OUTPUT_COMMENTS_PART}"
- if ! awk -f "${SCRIPT_BASE_DIRECTORY}/awk/extract_comments.awk" "${XML_PART}" > "${OUTPUT_COMMENTS_PART}"; then
+ if ! gawk -f "${SCRIPT_BASE_DIRECTORY}/awk/extract_comments.awk" "${XML_PART}" > "${OUTPUT_COMMENTS_PART}"; then
   __loge "Comments CSV file was not created: ${OUTPUT_COMMENTS_PART}"
   __log_finish
   return 1
@@ -1633,7 +1633,7 @@ function __processApiXmlPart() {
 
  # Process text comments with AWK
  __logd "Processing text comments with AWK: ${XML_PART} -> ${OUTPUT_TEXT_PART}"
- if ! awk -f "${SCRIPT_BASE_DIRECTORY}/awk/extract_comment_texts.awk" "${XML_PART}" > "${OUTPUT_TEXT_PART}"; then
+ if ! gawk -f "${SCRIPT_BASE_DIRECTORY}/awk/extract_comment_texts.awk" "${XML_PART}" > "${OUTPUT_TEXT_PART}"; then
   __logw "Text comments CSV file was not created, generating empty file to continue: ${OUTPUT_TEXT_PART}"
   : > "${OUTPUT_TEXT_PART}"
  fi
