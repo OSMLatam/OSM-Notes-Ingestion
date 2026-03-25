@@ -1819,12 +1819,13 @@ function __processPlanetNotesWithParallel {
   # Execute the main processing function
   # Output is synchronized by parallel's internal buffering
   __logd "[WORKER] About to call __processPlanetXmlPart for ${PART_BASENAME}"
-  # shellcheck disable=SC2310
-  # Function is invoked in if condition intentionally
-  if ! __processPlanetXmlPart "${PART_FILE}"; then
-   PROCESS_RESULT=$?
-  else
+  # Capture real exit code from worker function.
+  # Important: do not use "if ! cmd; then rc=$?" because $? becomes 0
+  # (status of the negation), masking worker failures as success.
+  if __processPlanetXmlPart "${PART_FILE}"; then
    PROCESS_RESULT=0
+  else
+   PROCESS_RESULT=$?
   fi
   if [[ "${PROCESS_RESULT:-0}" -eq 0 ]]; then
    __logi "[WORKER] Successfully completed processing of ${PART_BASENAME}"
