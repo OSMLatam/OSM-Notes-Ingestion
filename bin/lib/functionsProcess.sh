@@ -5,8 +5,8 @@
 # It loads all function modules for use across the project.
 #
 # Author: Andres Gomez (AngocA)
-# Version: 2026-03-24
-VERSION="2026-03-24"
+# Version: 2026-03-25
+VERSION="2026-03-25"
 # Note: __checkPrereqsCommands below overrides commonFunctions.sh after sourcing.
 # The common copy checks a minimal CLI set plus __validate_gnu_awk; this copy adds
 # DB, files, and network checks for ingestion scripts.
