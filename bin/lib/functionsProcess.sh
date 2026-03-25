@@ -7,6 +7,9 @@
 # Author: Andres Gomez (AngocA)
 # Version: 2026-03-24
 VERSION="2026-03-24"
+# Note: __checkPrereqsCommands below overrides commonFunctions.sh after sourcing.
+# The common copy checks a minimal CLI set plus __validate_gnu_awk; this copy adds
+# DB, files, and network checks for ingestion scripts.
 
 # shellcheck disable=SC2317,SC2155
 # NOTE: SC2154 warnings are expected as many variables are defined in sourced files
@@ -2090,8 +2093,9 @@ function __validate_properties {
  return 0
 }
 
-# Checks prerequisites commands to run the script.
-# Validates that all required tools and libraries are available.
+# Checks prerequisites commands to run the script (replaces commonFunctions version).
+# Validates DB, tools, files, and network for ingestion; see commonFunctions for the
+# minimal __checkPrereqsCommands used when functionsProcess is not loaded.
 function __checkPrereqsCommands {
  __log_start
  # Check if prerequisites have already been verified in this execution.
@@ -2275,24 +2279,8 @@ EOF
   # ERROR_MISSING_LIBRARY is defined in lib/osm-common/commonFunctions.sh
   exit "${ERROR_MISSING_LIBRARY}"
  fi
- ## GNU awk (gawk) — required for awk/extract_*.awk (match() with array capture;
- ## Debian/Ubuntu default mawk fails with syntax errors on those scripts).
- __logd "Checking GNU awk (gawk)."
- GAWK_BIN="$(type -P gawk 2> /dev/null || true)"
- if [[ -z "${GAWK_BIN}" ]]; then
-  __loge "ERROR: GNU awk (gawk) is missing or not in PATH."
-  __loge "Install gawk (e.g. Debian/Ubuntu: sudo apt-get install gawk)."
-  __loge "The default mawk does not support the GNU awk features used in awk/extract_*.awk."
-  # shellcheck disable=SC2154
-  exit "${ERROR_MISSING_LIBRARY}"
- fi
- # shellcheck disable=SC2312
- if ! "${GAWK_BIN}" -W version 2>&1 | head -1 | grep -q "GNU Awk"; then
-  __loge "ERROR: '${GAWK_BIN}' does not appear to be GNU awk (gawk)."
-  __loge "Install gawk and ensure 'type -P gawk' resolves to the GNU binary."
-  # shellcheck disable=SC2154
-  exit "${ERROR_MISSING_LIBRARY}"
- fi
+ ## GNU awk (gawk) — shared implementation in commonFunctions.sh
+ __validate_gnu_awk
  ## XML lint (optional, only for strict validation)
  if [[ "${SKIP_XML_VALIDATION}" != "true" ]]; then
   __logd "Checking XML lint."
