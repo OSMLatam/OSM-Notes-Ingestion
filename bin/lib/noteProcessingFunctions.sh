@@ -7,6 +7,7 @@
 # 2026-03-24: Extract noteLocation.csv under TMP_DIR (not fixed /tmp).
 # 2026-03-24: Log psql backup load to file; use if psql (no set +e under set -e).
 # 2026-03-24: Do not log every line of psql output at DEBUG (noise, empty rows).
+# 2026-03-24: When echoing backup stats, only NOTICE/WARNING (not psql command tags).
 VERSION="2026-03-24"
 
 # shellcheck disable=SC2317,SC2155,SC2034
@@ -231,24 +232,25 @@ function __getLocationNotes_impl {
  PSQL_BACKUP_LINE_COUNT=$(wc -l < "${PSQL_BACKUP_LOG}" 2> /dev/null | tr -d ' ' || echo '?')
  __logd "psql backup load output: ${PSQL_BACKUP_LINE_COUNT} lines in ${PSQL_BACKUP_LOG}"
 
- # Extract and log statistics from PostgreSQL output
+ # Extract and log statistics from PostgreSQL output. psql mixes command tags
+ # (CREATE INDEX, DO, etc.) with NOTICES; grep -A N alone pulls stray tags.
  if echo "${BACKUP_UPDATE_OUTPUT}" | grep -q "Backup statistics:"; then
   __logi "=== BACKUP STATISTICS ==="
-  echo "${BACKUP_UPDATE_OUTPUT}" | grep -A 5 "Backup statistics:" | while IFS= read -r LINE || true; do
-   if [[ -n "${LINE}" ]] && [[ "${LINE}" != "Backup statistics:" ]]; then
-    __logi "${LINE}"
-   fi
-  done
+  while IFS= read -r LINE || true; do
+   [[ -z "${LINE}" ]] && continue
+   __logi "${LINE}"
+  done < <(echo "${BACKUP_UPDATE_OUTPUT}" | grep -A 12 "Backup statistics:" \
+   | grep -E '^NOTICE:|^WARNING:' || true)
  fi
 
  # Extract and log update results
  if echo "${BACKUP_UPDATE_OUTPUT}" | grep -q "Update results:"; then
   __logi "=== UPDATE RESULTS ==="
-  echo "${BACKUP_UPDATE_OUTPUT}" | grep -A 3 "Update results:" | while IFS= read -r LINE || true; do
-   if [[ -n "${LINE}" ]] && [[ "${LINE}" != "Update results:" ]]; then
-    __logi "${LINE}"
-   fi
-  done
+  while IFS= read -r LINE || true; do
+   [[ -z "${LINE}" ]] && continue
+   __logi "${LINE}"
+  done < <(echo "${BACKUP_UPDATE_OUTPUT}" | grep -A 15 "Update results:" \
+   | grep -E '^NOTICE:|^WARNING:' || true)
  fi
 
  # Log warnings if any
