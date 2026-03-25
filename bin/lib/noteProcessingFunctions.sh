@@ -4,8 +4,8 @@
 # Author: Andres Gomez (AngocA)
 # Version: 2026-03-24
 # shellcheck disable=SC2034
-# 2026-03-24: Extract noteLocation.csv under TMP_DIR (not fixed /tmp) to avoid
-# permission errors when another user owns /tmp/noteLocation.csv.
+# 2026-03-24: Extract noteLocation.csv under TMP_DIR (not fixed /tmp).
+# 2026-03-24: Log psql backup load to file; use if psql (no set +e under set -e).
 VERSION="2026-03-24"
 
 # shellcheck disable=SC2317,SC2155,SC2034
@@ -187,19 +187,42 @@ function __getLocationNotes_impl {
  export CSV_BACKUP_NOTE_LOCATION
  rm -f "${CSV_BACKUP_NOTE_LOCATION}"
  # -o: overwrite without prompt (non-interactive; avoids hang under systemd)
- unzip -o "${CSV_BACKUP_NOTE_LOCATION_COMPRESSED}" -d "${EXTRACT_DIR}"
- chmod 666 "${CSV_BACKUP_NOTE_LOCATION}"
+ if ! unzip -o "${CSV_BACKUP_NOTE_LOCATION_COMPRESSED}" -d "${EXTRACT_DIR}"; then
+  __loge "unzip failed for ${CSV_BACKUP_NOTE_LOCATION_COMPRESSED}"
+  __log_finish
+  return 1
+ fi
+ chmod 666 "${CSV_BACKUP_NOTE_LOCATION}" 2> /dev/null || true
+ if [[ ! -f "${CSV_BACKUP_NOTE_LOCATION}" ]] || [[ ! -s "${CSV_BACKUP_NOTE_LOCATION}" ]]; then
+  __loge "Extracted CSV missing or empty: ${CSV_BACKUP_NOTE_LOCATION}"
+  __log_finish
+  return 1
+ fi
+ __logi "Extracted CSV OK ($(wc -c < "${CSV_BACKUP_NOTE_LOCATION}" | tr -d ' ') bytes)."
 
  __logi "Importing notes location from backup CSV..."
- __logi "This COPY operation may take several minutes for large datasets."
+ __logi "COPY is large (~5M rows); often 15-90 minutes. Log may look idle — DB is working."
  # shellcheck disable=SC2016
  # shellcheck disable=SC2154
  # POSTGRES_32_UPLOAD_NOTE_LOCATION is defined in pathConfigurationFunctions.sh
  local BACKUP_UPDATE_OUTPUT
- # Capture both stdout and stderr, and ensure NOTICE messages are shown
- BACKUP_UPDATE_OUTPUT=$(PGAPPNAME="${PGAPPNAME}" psql -d "${DBNAME}" -v ON_ERROR_STOP=1 \
+ local PSQL_BACKUP_LOG="${TMP_DIR}/backup_note_location_psql.log"
+ rm -f "${PSQL_BACKUP_LOG}"
+ __logi "PostgreSQL output file (tail -f for live progress): ${PSQL_BACKUP_LOG}"
+ # Do not use $(psql): it hides all output until psql exits and looks like a hang.
+ if PGAPPNAME="${PGAPPNAME}" psql -d "${DBNAME}" -v ON_ERROR_STOP=1 \
   -c "$(envsubst '$CSV_BACKUP_NOTE_LOCATION' \
-   < "${POSTGRES_32_UPLOAD_NOTE_LOCATION}" || true)" 2>&1)
+   < "${POSTGRES_32_UPLOAD_NOTE_LOCATION}")" \
+  > "${PSQL_BACKUP_LOG}" 2>&1; then
+  BACKUP_UPDATE_OUTPUT=$(cat "${PSQL_BACKUP_LOG}")
+ else
+  __loge "PostgreSQL backup load failed. See ${PSQL_BACKUP_LOG}"
+  head -80 "${PSQL_BACKUP_LOG}" | while IFS= read -r LINE || true; do
+   __loge "  ${LINE}"
+  done
+  __log_finish
+  return 1
+ fi
 
  # Log the raw output for debugging (first 50 lines to avoid flooding logs)
  __logd "PostgreSQL backup update output (first 50 lines):"
