@@ -4,7 +4,7 @@
 # Description: Centralized parallel processing functions with resource management and retry logic
 #
 # Author: Andres Gomez (AngocA)
-# Version: 2026-03-24
+# Version: 2026-03-25
 
 # Load properties to ensure all required variables are available
 # Only load production properties if we're not in a test environment
@@ -14,8 +14,11 @@ elif [[ -z "${BATS_TEST_DIRNAME:-}" ]] && [[ -f "./etc/properties.sh" ]]; then
  source "./etc/properties.sh"
 fi
 
-# Load common functions if not already loaded
-if [[ -z "${__log_start:-}" ]]; then
+# Load common functions if not already loaded.
+# Use declare -f: __log_start is a function, not a variable; ${__log_start} is always
+# empty, so the old test re-sourced commonFunctions and overwrote
+# __checkPrereqsCommands from functionsProcess.sh (including GNU awk validation).
+if ! declare -f __log_start > /dev/null 2>&1; then
  if [[ -f "${SCRIPT_BASE_DIRECTORY:-.}/lib/osm-common/commonFunctions.sh" ]]; then
   source "${SCRIPT_BASE_DIRECTORY}/lib/osm-common/commonFunctions.sh"
  elif [[ -f "./lib/osm-common/commonFunctions.sh" ]]; then
