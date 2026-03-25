@@ -3,7 +3,7 @@
 # Prerequisites Commands Tests
 # Tests for command availability validation
 # Author: Andres Gomez (AngocA)
-# Version: 2026-01-02
+# Version: 2026-03-24
 
 load "$(dirname "$BATS_TEST_FILENAME")/../../test_helper.bash"
 load "$(dirname "${BATS_TEST_FILENAME}")/performance_edge_cases_helper.bash"
@@ -174,5 +174,30 @@ teardown() {
  [ "$status" -ne 0 ]
 
  export PATH="$original_path"
+}
+
+@test "enhanced __checkPrereqsCommands should reject non-GNU gawk in PATH" {
+ if ! declare -f __checkPrereqsCommands > /dev/null 2>&1; then
+  skip "Function __checkPrereqsCommands not available"
+ fi
+
+ local fake_bin
+ fake_bin=$(mktemp -d)
+ # Executable named gawk that does not identify as GNU Awk
+ cat > "${fake_bin}/gawk" <<'EOF'
+#!/bin/bash
+echo "mawk 1.0 fake"
+exit 0
+EOF
+ chmod +x "${fake_bin}/gawk"
+
+ local original_path="$PATH"
+ export PATH="${fake_bin}:${PATH}"
+
+ run __checkPrereqsCommands
+ [ "$status" -ne 0 ]
+
+ export PATH="$original_path"
+ rm -rf "${fake_bin}"
 }
 

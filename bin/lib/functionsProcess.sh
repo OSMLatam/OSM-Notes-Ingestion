@@ -7,8 +7,6 @@
 # Author: Andres Gomez (AngocA)
 # Version: 2026-03-24
 VERSION="2026-03-24"
-# 2026-03-15: Planet download error handling: TMP_DIR existence/writability check;
-# clearer message when disk space validation fails (directory/permissions vs space).
 
 # shellcheck disable=SC2317,SC2155
 # NOTE: SC2154 warnings are expected as many variables are defined in sourced files
@@ -2275,6 +2273,24 @@ EOF
   __loge "ERROR: bzip2 is missing."
   # shellcheck disable=SC2154
   # ERROR_MISSING_LIBRARY is defined in lib/osm-common/commonFunctions.sh
+  exit "${ERROR_MISSING_LIBRARY}"
+ fi
+ ## GNU awk (gawk) — required for awk/extract_*.awk (match() with array capture;
+ ## Debian/Ubuntu default mawk fails with syntax errors on those scripts).
+ __logd "Checking GNU awk (gawk)."
+ GAWK_BIN="$(type -P gawk 2> /dev/null || true)"
+ if [[ -z "${GAWK_BIN}" ]]; then
+  __loge "ERROR: GNU awk (gawk) is missing or not in PATH."
+  __loge "Install gawk (e.g. Debian/Ubuntu: sudo apt-get install gawk)."
+  __loge "The default mawk does not support the GNU awk features used in awk/extract_*.awk."
+  # shellcheck disable=SC2154
+  exit "${ERROR_MISSING_LIBRARY}"
+ fi
+ # shellcheck disable=SC2312
+ if ! "${GAWK_BIN}" -W version 2>&1 | head -1 | grep -q "GNU Awk"; then
+  __loge "ERROR: '${GAWK_BIN}' does not appear to be GNU awk (gawk)."
+  __loge "Install gawk and ensure 'type -P gawk' resolves to the GNU binary."
+  # shellcheck disable=SC2154
   exit "${ERROR_MISSING_LIBRARY}"
  fi
  ## XML lint (optional, only for strict validation)
