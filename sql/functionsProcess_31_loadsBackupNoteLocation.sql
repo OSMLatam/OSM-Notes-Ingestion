@@ -2,7 +2,7 @@
 -- note's location.
 --
 -- Author: Andres Gomez (AngocA)
--- Version: 2026-03-23
+-- Version: 2026-03-24
 
 -- noqa: disable=all
 SELECT /* Notes-processAPI */ clock_timestamp() AS Processing,
@@ -66,6 +66,27 @@ END $$;
 
 SELECT /* Notes-processAPI */ clock_timestamp() AS Processing,
  'Locations loaded. Updating notes...' AS Text;
+
+-- Diagnostics: explains 0-row UPDATE (empty notes, or no NULL/negative id_country)
+DO $$
+DECLARE
+  n_notes BIGINT;
+  n_pending BIGINT;
+  n_join BIGINT;
+BEGIN
+  SELECT COUNT(*) INTO n_notes FROM notes;
+  SELECT COUNT(*) INTO n_pending
+  FROM notes
+  WHERE (id_country IS NULL OR id_country < 0);
+  SELECT COUNT(*) INTO n_join
+  FROM notes AS n
+  INNER JOIN backup_note_locations AS b ON b.note_id = n.note_id
+  INNER JOIN countries AS c ON c.country_id = b.id_country
+  WHERE (n.id_country IS NULL OR n.id_country < 0)
+    AND b.id_country > 0;
+  RAISE NOTICE 'Before backup UPDATE: total notes=%, rows needing country (NULL or negative)=%, updatable matches (notes∩backup∩countries)=%',
+    n_notes, n_pending, n_join;
+END $$;
 
 -- Update notes with backup data, only for countries that exist in countries table
 -- This ensures data integrity while using the backup for speed

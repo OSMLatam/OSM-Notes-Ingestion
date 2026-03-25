@@ -6,6 +6,7 @@
 # shellcheck disable=SC2034
 # 2026-03-24: Extract noteLocation.csv under TMP_DIR (not fixed /tmp).
 # 2026-03-24: Log psql backup load to file; use if psql (no set +e under set -e).
+# 2026-03-24: Do not log every line of psql output at DEBUG (noise, empty rows).
 VERSION="2026-03-24"
 
 # shellcheck disable=SC2317,SC2155,SC2034
@@ -224,11 +225,11 @@ function __getLocationNotes_impl {
   return 1
  fi
 
- # Log the raw output for debugging (first 50 lines to avoid flooding logs)
- __logd "PostgreSQL backup update output (first 50 lines):"
- echo "${BACKUP_UPDATE_OUTPUT}" | head -50 | while IFS= read -r LINE || true; do
-  __logd "  ${LINE}"
- done
+ # Full psql output is in PSQL_BACKUP_LOG; line-by-line DEBUG duplicates tabular
+ # noise and blank lines from psql formatting.
+ local PSQL_BACKUP_LINE_COUNT
+ PSQL_BACKUP_LINE_COUNT=$(wc -l < "${PSQL_BACKUP_LOG}" 2> /dev/null | tr -d ' ' || echo '?')
+ __logd "psql backup load output: ${PSQL_BACKUP_LINE_COUNT} lines in ${PSQL_BACKUP_LOG}"
 
  # Extract and log statistics from PostgreSQL output
  if echo "${BACKUP_UPDATE_OUTPUT}" | grep -q "Backup statistics:"; then
