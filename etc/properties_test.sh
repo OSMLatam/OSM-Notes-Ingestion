@@ -6,7 +6,7 @@
 # This file is loaded INSTEAD of etc/properties.sh when in test mode.
 #
 # Author: Andres Gomez (AngocA)
-# Version: 2025-01-23
+# Version: 2026-03-26
 
 # Database configuration for tests
 # These values override production values for test environments
@@ -73,12 +73,18 @@ declare OVERPASS_CONTINUE_VALIDATION_RETRIES="${OVERPASS_CONTINUE_VALIDATION_RET
 # JSON validator command (must support: jq -e .).
 declare JSON_VALIDATOR="${JSON_VALIDATOR:-jq}"
 
+# Global project identity used across logs and HTTP headers.
+declare PROJECT_NAME="${PROJECT_NAME:-OSM-Notes-Ingestion}"
+declare PROJECT_VERSION="${PROJECT_VERSION:-2026-03-26}"
+declare PROJECT_URL="${PROJECT_URL:-https://github.com/OSM-Notes/OSM-Notes-Ingestion}"
+declare PROJECT_CONTACT_EMAIL="${PROJECT_CONTACT_EMAIL:-notes@osm.lat}"
+
 # Generic download User-Agent applied to all HTTP requests when supported.
 # Recommended format: ProjectName/Version (+project_url; contact: email)
 # Defaults to project identity if not provided.
 if [[ -z "${DOWNLOAD_USER_AGENT:-}" ]]; then
   # Do not break lines; keep UA in one line for header correctness
-  DOWNLOAD_USER_AGENT="OSM-Notes-Ingestion/2025-10-30 (+https://github.com/OSM-Notes/OSM-Notes-Ingestion; contact: notes@osm.lat)"
+  DOWNLOAD_USER_AGENT="${PROJECT_NAME}/${PROJECT_VERSION} (+${PROJECT_URL}; contact: ${PROJECT_CONTACT_EMAIL})"
 fi
 
 # Processing configuration.

@@ -123,7 +123,7 @@ EOF
 
   # Test Overpass API call for invalid ID
   echo "Testing invalid boundary ID: ${id}..."
-  run curl -s -H "User-Agent: OSM-Notes-Ingestion/1.0" -o "$mock_json" --data-binary @"$mock_query" "https://overpass-api.de/api/interpreter" 2>&1
+  run curl -s -H "User-Agent: ${DOWNLOAD_USER_AGENT}" -o "$mock_json" --data-binary @"$mock_query" "https://overpass-api.de/api/interpreter" 2>&1
 
   tested_count=$((tested_count + 1))
 
@@ -184,7 +184,7 @@ EOF
 
   # Test Overpass API call for valid ID
   echo "Testing valid boundary ID: ${id}..."
-  run curl -s -H "User-Agent: OSM-Notes-Ingestion/1.0" -o "$mock_json" --data-binary @"$mock_query" "https://overpass-api.de/api/interpreter" 2>&1
+  run curl -s -H "User-Agent: ${DOWNLOAD_USER_AGENT}" -o "$mock_json" --data-binary @"$mock_query" "https://overpass-api.de/api/interpreter" 2>&1
 
   tested_count=$((tested_count + 1))
 

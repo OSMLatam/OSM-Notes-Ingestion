@@ -2190,7 +2190,7 @@ source bin/lib/functionsProcess.sh
 
 # Retry file download with exponential backoff and Overpass rate limiting
 __retry_file_operation \
-  "curl -s -H 'User-Agent: OSM-Notes-Ingestion/1.0' -o ${OUTPUT_FILE} ${URL}" \
+  "curl -s -H 'User-Agent: ${DOWNLOAD_USER_AGENT}' -o ${OUTPUT_FILE} ${URL}" \
   7 \
   20 \
   "rm -f ${OUTPUT_FILE}" \

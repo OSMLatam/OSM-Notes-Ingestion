@@ -163,7 +163,7 @@ local DOWNLOAD_SUCCESS=false
 
 while [[ ${DOWNLOAD_VALIDATION_RETRY_COUNT} -lt ${DOWNLOAD_VALIDATION_RETRIES} ]] && [[ "${DOWNLOAD_SUCCESS}" == "false" ]]; do
   # Attempt download
-  curl -s -H "User-Agent: OSM-Notes-Ingestion/1.0" -o "${JSON_FILE}" --data-binary @"${QUERY_FILE}" "${OVERPASS_INTERPRETER}" 2> "${OUTPUT_OVERPASS}"
+  curl -s -H "User-Agent: ${DOWNLOAD_USER_AGENT}" -o "${JSON_FILE}" --data-binary @"${QUERY_FILE}" "${OVERPASS_INTERPRETER}" 2> "${OUTPUT_OVERPASS}"
 
   # Validate JSON structure and ensure it contains elements
   if ! __validate_json_with_element "${JSON_FILE}" "elements"; then

@@ -149,7 +149,7 @@ __download_json_from_overpass() {
  __create_overpass_query "${TEST_ID}" "${QUERY_FILE}"
 
  # Download
- run curl -s -H "User-Agent: OSM-Notes-Ingestion/1.0" -o "${JSON_FILE}" --data-binary @"${QUERY_FILE}" "${OVERPASS_INTERPRETER}" 2> "${OUTPUT_OVERPASS}"
+ run curl -s -H "User-Agent: ${DOWNLOAD_USER_AGENT}" -o "${JSON_FILE}" --data-binary @"${QUERY_FILE}" "${OVERPASS_INTERPRETER}" 2> "${OUTPUT_OVERPASS}"
 
  if [ "${status}" -eq 0 ] && [[ -f "${JSON_FILE}" ]] && [[ -s "${JSON_FILE}" ]]; then
   echo "${JSON_FILE}"

@@ -80,7 +80,7 @@ EOF
  export -f curl
 
  # Download using curl
- run curl -s -H "User-Agent: OSM-Notes-Ingestion/1.0" -o "${JSON_FILE}" --data-binary @"${QUERY_FILE}" "${OVERPASS_INTERPRETER}" 2> /dev/null
+run curl -s -H "User-Agent: ${DOWNLOAD_USER_AGENT}" -o "${JSON_FILE}" --data-binary @"${QUERY_FILE}" "${OVERPASS_INTERPRETER}" 2> /dev/null
 
  # Verify download succeeded
  [[ "${status}" -eq 0 ]]
@@ -117,7 +117,7 @@ EOF
  export -f curl
 
  # Attempt download
- run curl -s -H "User-Agent: OSM-Notes-Ingestion/1.0" -o "${JSON_FILE}" --data-binary @"${QUERY_FILE}" "${OVERPASS_INTERPRETER}" 2> /dev/null
+run curl -s -H "User-Agent: ${DOWNLOAD_USER_AGENT}" -o "${JSON_FILE}" --data-binary @"${QUERY_FILE}" "${OVERPASS_INTERPRETER}" 2> /dev/null
 
  # Should handle failure gracefully
  [[ "${status}" -ne 0 ]]
@@ -151,7 +151,7 @@ EOF
  __setup_mock_curl_overpass "${QUERY_FILE}" "${INVALID_JSON}"
 
  # Download
- run curl -s -H "User-Agent: OSM-Notes-Ingestion/1.0" -o "${JSON_FILE}" --data-binary @"${QUERY_FILE}" "${OVERPASS_INTERPRETER}" 2> /dev/null
+run curl -s -H "User-Agent: ${DOWNLOAD_USER_AGENT}" -o "${JSON_FILE}" --data-binary @"${QUERY_FILE}" "${OVERPASS_INTERPRETER}" 2> /dev/null
 
  # Download should succeed (curl mock returns success)
  [[ "${status}" -eq 0 ]]

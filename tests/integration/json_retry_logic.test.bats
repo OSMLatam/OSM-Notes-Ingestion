@@ -113,7 +113,7 @@ EOF
   fi
 
   # Attempt download
-  run curl -s -H "User-Agent: OSM-Notes-Ingestion/1.0" -o "${JSON_FILE}" --data-binary @"${QUERY_FILE}" "${OVERPASS_INTERPRETER}" 2> "${OUTPUT_OVERPASS}"
+  run curl -s -H "User-Agent: ${DOWNLOAD_USER_AGENT}" -o "${JSON_FILE}" --data-binary @"${QUERY_FILE}" "${OVERPASS_INTERPRETER}" 2> "${OUTPUT_OVERPASS}"
 
   if [ "${status}" -eq 0 ] && [[ -f "${JSON_FILE}" ]] && [[ -s "${JSON_FILE}" ]]; then
    # Validate JSON structure
@@ -284,7 +284,7 @@ EOF
 
  # Use __retry_file_operation for download
  # Note: Using smart_wait=false to avoid dependency on download queue functions in test environment
- local OPERATION="curl -s -H 'User-Agent: OSM-Notes-Ingestion/1.0' -o '${JSON_FILE}' --data-binary '@${QUERY_FILE}' '${OVERPASS_INTERPRETER}' 2> /dev/null"
+ local OPERATION="curl -s -H 'User-Agent: ${DOWNLOAD_USER_AGENT}' -o '${JSON_FILE}' --data-binary '@${QUERY_FILE}' '${OVERPASS_INTERPRETER}' 2> /dev/null"
  run __retry_file_operation "${OPERATION}" 3 2 "" "false"
 
  # Download should succeed

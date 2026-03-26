@@ -52,8 +52,8 @@
 # For contributing: shellcheck -x -o all updateCountries.sh && shfmt -w -i 1 -sr -bn updateCountries.sh
 #
 # Author: Andres Gomez (AngocA)
-# Version: 2026-03-24
-VERSION="2026-03-24"
+# Version: 2026-03-26
+VERSION="2026-03-26"
 
 #set -xv
 # Fails when a variable is not initialized.
@@ -709,7 +709,7 @@ function __checkBoundariesUpdateNeeded {
  TMP_IDS_FILE="${TMP_DIR}/${TYPE}_ids_from_overpass.txt"
  __logd "Downloading ${TYPE} IDs from Overpass..."
  set +e
- curl -s -H "User-Agent: ${DOWNLOAD_USER_AGENT:-OSM-Notes-Ingestion/1.0}" -o "${TMP_IDS_FILE}" \
+ curl -s -H "User-Agent: ${DOWNLOAD_USER_AGENT}" -o "${TMP_IDS_FILE}" \
   --data-binary "@${OVERPASS_QUERY_FILE}" \
   "${OVERPASS_INTERPRETER}" 2> /dev/null
  local RET=${?}
@@ -1439,7 +1439,7 @@ out;"
 
   local TEMP_OVERLASS_RESPONSE="${TMP_DIR}/overpass_${eez_id}.json"
   if curl -s --connect-timeout $((QUERY_TIMEOUT + 5)) --max-time $((QUERY_TIMEOUT + 5)) \
-   -H "User-Agent: ${DOWNLOAD_USER_AGENT:-OSM-Notes-Ingestion/1.0}" \
+   -H "User-Agent: ${DOWNLOAD_USER_AGENT}" \
    -H "Content-Type: application/x-www-form-urlencoded" \
    -o "${TEMP_OVERLASS_RESPONSE}" \
    -d "data=${OVERPASS_QUERY}" \

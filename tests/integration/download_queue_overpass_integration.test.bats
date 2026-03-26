@@ -66,7 +66,7 @@ out;
 EOF
 
   # Download with queue system
-  local OPERATION="curl -s -H 'User-Agent: OSM-Notes-Ingestion/1.0' -o '${JSON_FILE}' --data-binary '@${QUERY_FILE}' '${OVERPASS_INTERPRETER}' 2> /dev/null"
+  local OPERATION="curl -s -H 'User-Agent: ${DOWNLOAD_USER_AGENT}' -o '${JSON_FILE}' --data-binary '@${QUERY_FILE}' '${OVERPASS_INTERPRETER}' 2> /dev/null"
 
   # Use run to capture output
   run __retry_file_operation "${OPERATION}" 3 2 "" "true"
@@ -137,7 +137,7 @@ rel(${ID});
 out;
 EOF
 
-   local OPERATION="curl -s -H 'User-Agent: OSM-Notes-Ingestion/1.0' -o '${JSON_FILE}' --data-binary '@${QUERY_FILE}' '${OVERPASS_INTERPRETER}' 2> /dev/null"
+   local OPERATION="curl -s -H 'User-Agent: ${DOWNLOAD_USER_AGENT}' -o '${JSON_FILE}' --data-binary '@${QUERY_FILE}' '${OVERPASS_INTERPRETER}' 2> /dev/null"
    local START_TIME
    START_TIME=$(date +%s)
 
@@ -182,7 +182,7 @@ out;
 EOF
 
  # Try download with queue
-  local OPERATION="curl -s -H 'User-Agent: OSM-Notes-Ingestion/1.0' -o '${JSON_FILE}' --data-binary '@${QUERY_FILE}' '${OVERPASS_INTERPRETER}' 2> /dev/null"
+  local OPERATION="curl -s -H 'User-Agent: ${DOWNLOAD_USER_AGENT}' -o '${JSON_FILE}' --data-binary '@${QUERY_FILE}' '${OVERPASS_INTERPRETER}' 2> /dev/null"
 
  # Check if functions are available
  if ! declare -f __retry_file_operation > /dev/null 2>&1; then
@@ -309,7 +309,7 @@ EOF
  # Simulate __processBoundary call with queue
  local MAX_RETRIES=3
  local BASE_DELAY=2
-  local OVERPASS_OPERATION="curl -s -H 'User-Agent: OSM-Notes-Ingestion/1.0' -o '${JSON_FILE}' --data-binary '@${QUERY_FILE}' '${OVERPASS_INTERPRETER}' 2> /dev/null"
+  local OVERPASS_OPERATION="curl -s -H 'User-Agent: ${DOWNLOAD_USER_AGENT}' -o '${JSON_FILE}' --data-binary '@${QUERY_FILE}' '${OVERPASS_INTERPRETER}' 2> /dev/null"
 
  # Add cleanup command to remove JSON file if download fails
  # curl may leave a file with error content when it fails, so we need to clean it up

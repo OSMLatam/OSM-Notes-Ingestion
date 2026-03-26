@@ -977,7 +977,7 @@ function __check_network_connectivity() {
  __logd "Checking network connectivity"
 
  for URL in "${TEST_URLS[@]}"; do
-  if timeout "${TIMEOUT}" curl -s --connect-timeout 5 -H "User-Agent: ${DOWNLOAD_USER_AGENT:-OSM-Notes-Ingestion/1.0}" "${URL}" > /dev/null 2>&1; then
+  if timeout "${TIMEOUT}" curl -s --connect-timeout 5 -H "User-Agent: ${DOWNLOAD_USER_AGENT}" "${URL}" > /dev/null 2>&1; then
    __logi "Network connectivity confirmed via ${URL}"
    __log_finish
    return 0
@@ -2189,7 +2189,7 @@ if ! declare -f __check_overpass_status > /dev/null 2>&1; then
 
   __logd "Checking Overpass API status at ${STATUS_URL}..."
 
-  if ! STATUS_OUTPUT=$(curl -s -H "User-Agent: ${DOWNLOAD_USER_AGENT:-OSM-Notes-Ingestion/1.0}" "${STATUS_URL}" 2>&1); then
+ if ! STATUS_OUTPUT=$(curl -s -H "User-Agent: ${DOWNLOAD_USER_AGENT}" "${STATUS_URL}" 2>&1); then
    __logw "Could not reach Overpass API status page, assuming available"
    __log_finish
    echo "0"
@@ -2308,7 +2308,7 @@ function __retry_network_operation() {
  while [[ ${RETRY_COUNT} -lt ${LOCAL_MAX_RETRIES} ]]; do
   # Use curl with specific error handling and timeout
   if curl -s --connect-timeout "${TIMEOUT}" --max-time "${TIMEOUT}" \
-   -H "User-Agent: ${DOWNLOAD_USER_AGENT:-OSM-Notes-Ingestion/1.0}" \
+   -H "User-Agent: ${DOWNLOAD_USER_AGENT}" \
    -o "${OUTPUT_FILE}" "${URL}"; then
    # Verify the downloaded file exists and has content
    if [[ -f "${OUTPUT_FILE}" ]] && [[ -s "${OUTPUT_FILE}" ]]; then
@@ -2370,7 +2370,7 @@ function __retry_network_operation() {
 #
 # Context variables:
 #   Reads:
-#     - DOWNLOAD_USER_AGENT: User-Agent header for HTTP requests (optional, default: OSM-Notes-Ingestion/1.0)
+#     - DOWNLOAD_USER_AGENT: User-Agent header for HTTP requests (required from properties)
 #     - LOG_LEVEL: Controls logging verbosity
 #   Sets: None
 #   Modifies: None
@@ -2428,11 +2428,7 @@ function __retry_overpass_api() {
   __logd "HTTP/2 not available, using HTTP/1.1 with keep-alive"
  fi
 
- if [[ -n "${DOWNLOAD_USER_AGENT:-}" ]]; then
-  CURL_OPTS+=("-H" "User-Agent: ${DOWNLOAD_USER_AGENT}")
- else
-  CURL_OPTS+=("-H" "User-Agent: OSM-Notes-Ingestion/1.0")
- fi
+CURL_OPTS+=("-H" "User-Agent: ${DOWNLOAD_USER_AGENT}")
 
  CURL_OPTS+=("-o" "${OUTPUT_FILE}")
 
@@ -2493,7 +2489,7 @@ function __retry_overpass_api() {
 #
 # Context variables:
 #   Reads:
-#     - DOWNLOAD_USER_AGENT: User-Agent header for HTTP requests (optional, default: OSM-Notes-Ingestion/1.0)
+#     - DOWNLOAD_USER_AGENT: User-Agent header for HTTP requests (required from properties)
 #     - ENABLE_HTTP_CACHE: Enable conditional caching with If-Modified-Since (optional, default: true)
 #     - LOG_LEVEL: Controls logging verbosity
 #   Sets: None
