@@ -207,6 +207,7 @@ function __countXmlNotesAPI() {
 function __resolve_notes_limit_from_capabilities() {
  __log_start
  local REQUESTED_LIMIT="$1"
+ # shellcheck disable=SC2154
  local CAPABILITIES_URL="${OSM_API}/capabilities"
  local CAPABILITIES_FILE
  local MAX_QUERY_LIMIT
@@ -214,9 +215,11 @@ function __resolve_notes_limit_from_capabilities() {
 
  CAPABILITIES_FILE=$(mktemp)
 
+ # shellcheck disable=SC2154
  if curl -s --connect-timeout 10 --max-time 20 \
   -H "User-Agent: ${DOWNLOAD_USER_AGENT}" \
   -o "${CAPABILITIES_FILE}" "${CAPABILITIES_URL}" 2> /dev/null; then
+  # shellcheck disable=SC2312
   MAX_QUERY_LIMIT=$(sed -n \
    's/.*<notes[^>]*maximum_query_limit="\([0-9][0-9]*\)".*/\1/p' \
    "${CAPABILITIES_FILE}" | head -n 1)
@@ -246,6 +249,7 @@ function __resolve_notes_limit_from_capabilities() {
 # Parameters:
 #   $1: LAST_UPDATE - ISO timestamp used in API from= filter (required)
 #   $2: REQUESTED_LIMIT - Initial notes limit to try (required)
+#   $3: REQUEST_ORDER - Optional order parameter (e.g. "oldest" or "newest")
 #
 # Returns:
 #   0: Success - Notes downloaded to API_NOTES_FILE
@@ -259,6 +263,7 @@ function __download_api_notes_with_dynamic_limit() {
  __log_start
  local LAST_UPDATE="$1"
  local REQUESTED_LIMIT="$2"
+ local REQUEST_ORDER="${3:-}"
  local MIN_LIMIT="${MIN_DYNAMIC_NOTES_LIMIT:-100}"
  local CURRENT_LIMIT="${REQUESTED_LIMIT}"
  local NEXT_LIMIT
@@ -274,13 +279,18 @@ function __download_api_notes_with_dynamic_limit() {
  fi
 
  while true; do
-  REQUEST="${OSM_API}/notes/search.xml?limit=${CURRENT_LIMIT}&closed=-1&sort=updated_at&from=${LAST_UPDATE}"
+  local ORDER_QUERY=""
+  if [[ -n "${REQUEST_ORDER}" ]]; then
+   ORDER_QUERY="&order=${REQUEST_ORDER}"
+  fi
+  REQUEST="${OSM_API}/notes/search.xml?limit=${CURRENT_LIMIT}&closed=-1&sort=updated_at&from=${LAST_UPDATE}${ORDER_QUERY}"
   __logi "API Request URL: ${REQUEST}"
   __logd "Dynamic API limit attempt: ${CURRENT_LIMIT} (min=${MIN_LIMIT})"
 
   # Download notes from API with retry logic.
   if __retry_osm_api "${REQUEST}" "${API_NOTES_FILE}" 5 2 120; then
    __logi "API notes download succeeded with dynamic limit=${CURRENT_LIMIT}"
+   __logd "API notes request order (when used): ${REQUEST_ORDER:-<not_set>}"
    __log_finish
    return 0
   fi

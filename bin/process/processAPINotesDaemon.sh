@@ -65,7 +65,7 @@ if [[ ! -f "${PROPERTIES_FILE}" ]]; then
  echo "Then edit ${PROPERTIES_FILE} with your configuration." >&2
  exit 1
 fi
-# shellcheck disable=SC1091
+# shellcheck disable=SC1090,SC1091
 source "${PROPERTIES_FILE}"
 
 umask 0000
@@ -244,7 +244,7 @@ function __daemon_reload_config {
   __loge "Cannot reload configuration"
   return 1
  fi
- # shellcheck disable=SC1091
+ # shellcheck disable=SC1090,SC1091
  source "${PROPERTIES_FILE}"
 
  # Actualizar intervalo si cambió
@@ -1100,146 +1100,180 @@ function __process_api_data {
   fi
  fi
 
-# Ensure procedures exist before processing API data.
-# API staging tables are prepared only after successful download/validation,
-# so previous snapshot is preserved when upstream API is temporarily failing.
+ # Ensure procedures exist before processing API data.
+ # API staging tables are prepared only after successful download/validation,
+ # so previous snapshot is preserved when upstream API is temporarily failing.
  __logi "Ensuring API tables and procedures exist before processing..."
  __ensureGetCountryFunction
  __createProcedures
 
- # Download data (only if database is not empty)
- local API_DOWNLOAD_RESULT=0
- # shellcheck disable=SC2310
- # Function is invoked in if condition intentionally
- if ! __getNewNotesFromApi; then
-  API_DOWNLOAD_RESULT=$?
- else
-  API_DOWNLOAD_RESULT=0
+ # API pagination enabled to avoid resyncing from Planet on daemon crashes.
+ # We fetch the backlog in pages using `order=oldest` and move the cursor using
+ # `max_note_timestamp`. If the first page fails, we keep the previous snapshot.
+ #
+ # Validation flow (for parity checks):
+ #   __validateApiNotesFile -> __validateApiNotesXMLFileComplete -> __countXmlNotesAPI
+ local PAGINATION_PAGE_LIMIT="${API_PAGINATION_PAGE_LIMIT:-1000}"
+
+ # Keep each page safely below MAX_NOTES so __processXMLorPlanet doesn't trigger
+ # a full Planet sync during pagination recovery.
+ if ((PAGINATION_PAGE_LIMIT >= MAX_NOTES)); then
+  if ((MAX_NOTES > 1)); then
+   PAGINATION_PAGE_LIMIT=$((MAX_NOTES - 1))
+  else
+   PAGINATION_PAGE_LIMIT=1
+  fi
  fi
 
- if [[ ${API_DOWNLOAD_RESULT} -ne 0 ]]; then
- __logw "Failed to download notes from API (error code: ${API_DOWNLOAD_RESULT})"
- __logw "Skipping this cycle without truncating API tables; keeping previous snapshot"
+ local PAGINATION_MAX_PAGES="${API_PAGINATION_MAX_PAGES:-20}"
+ if ((PAGINATION_MAX_PAGES < 1)); then
+  PAGINATION_MAX_PAGES=1
+ fi
+
+ local API_CURSOR
+ API_CURSOR=$(psql -d "${DBNAME}" -Atq -c \
+  "SELECT /* Notes-processAPI-daemon pagination */ TO_CHAR(timestamp, E'YYYY-MM-DD\\\"T\\\"HH24:MI:SS\\\"Z\\\"') FROM max_note_timestamp" \
+  2> /dev/null | head -1 || echo "")
+
+ if [[ "${API_CURSOR}" == "" ]]; then
+  __logw "Could not retrieve max_note_timestamp cursor; stopping pagination"
   __log_finish
- return 0
+  return 0
  fi
 
- # Validate file
-if ! __validateApiNotesFile; then
- __logw "API notes file validation failed; skipping this cycle without truncating API tables"
- __log_finish
- return 0
-fi
+ local EFFECTIVE_PAGE_LIMIT
+ EFFECTIVE_PAGE_LIMIT=$(__resolve_notes_limit_from_capabilities "${PAGINATION_PAGE_LIMIT}")
 
-# Prepare API staging tables only after download and validation succeeded.
-__prepareApiTables
+ local PAGE_INDEX=0
+ while ((PAGE_INDEX < PAGINATION_MAX_PAGES)); do
+  PAGE_INDEX=$((PAGE_INDEX + 1))
+  __logi "API pagination page ${PAGE_INDEX}/${PAGINATION_MAX_PAGES}: from=${API_CURSOR}, limit=${EFFECTIVE_PAGE_LIMIT}, order=oldest"
 
- # Validate and process XML (equivalent to processAPINotes.sh flow)
- # This function handles: validation, counting, processing, insertion
- # It's equivalent to: __validateAndProcessApiXml in processAPINotes.sh
- declare -i RESULT
- RESULT=$(wc -l < "${API_NOTES_FILE}" 2> /dev/null || echo "0")
- if [[ "${RESULT}" -ne 0 ]]; then
+  # shellcheck disable=SC2310
+  if ! __download_api_notes_with_dynamic_limit "${API_CURSOR}" "${EFFECTIVE_PAGE_LIMIT}" "oldest"; then
+   if ((PAGE_INDEX == 1)); then
+    __logw "Failed to download first paginated API page; skipping this cycle without truncating API tables"
+    __log_finish
+    return 0
+   fi
+   __logw "Failed to download paginated API page ${PAGE_INDEX}; stopping pagination"
+   break
+  fi
+
+  # shellcheck disable=SC2310
+  if ! __validateApiNotesFile; then
+   if ((PAGE_INDEX == 1)); then
+    __logw "API notes file validation failed for first page; skipping this cycle without truncating API tables"
+    __log_finish
+    return 0
+   fi
+   __logw "API notes file validation failed for page ${PAGE_INDEX}; stopping pagination"
+   break
+  fi
+
+  # Prepare API staging tables only after download and validation succeeded.
+  __prepareApiTables
+
+  declare -i RESULT
+  RESULT=$(wc -l < "${API_NOTES_FILE}" 2> /dev/null || echo "0")
+  if [[ "${RESULT}" -eq 0 ]] || [[ ! -s "${API_NOTES_FILE}" ]]; then
+   __logi "Paginated page ${PAGE_INDEX} returned no XML content; stopping pagination"
+   break
+  fi
+
   if [[ "${SKIP_XML_VALIDATION}" != "true" ]]; then
    __validateApiNotesXMLFileComplete
   else
    __logw "WARNING: XML validation SKIPPED (SKIP_XML_VALIDATION=true)"
   fi
+
   __countXmlNotesAPI "${API_NOTES_FILE}"
 
-  if [[ "${TOTAL_NOTES}" -gt 0 ]]; then
-   __logi "Processing ${TOTAL_NOTES} notes"
-
-   if [[ "${TOTAL_NOTES}" -ge "${MAX_NOTES}" ]]; then
-    __logw "Too many notes (${TOTAL_NOTES} >= ${MAX_NOTES}), triggering Planet sync"
-    __logi "Executing: ${NOTES_SYNC_SCRIPT}"
-    # Clean up any stale lock files from previous executions
-    # This prevents permission issues when daemon (user: notes) tries to run
-    # processPlanetNotes.sh that was previously run by another user
-    local PLANET_LOCK_FILE="${LOCK_DIR}/processPlanetNotes.lock"
-    if [[ -f "${PLANET_LOCK_FILE}" ]]; then
-     __logw "Removing stale lock file: ${PLANET_LOCK_FILE}"
-     # Try to remove with sudo if regular rm fails (permission issues)
-     if ! rm -f "${PLANET_LOCK_FILE}" 2> /dev/null; then
-      __logw "Could not remove lock file with regular rm, trying with sudo"
-      if command -v sudo > /dev/null 2>&1; then
-       sudo rm -f "${PLANET_LOCK_FILE}" 2> /dev/null || true
-      else
-       __logw "sudo not available, lock file may cause issues"
-      fi
-     fi
-    fi
-
-    # Clear lock-related variables to allow processPlanetNotes.sh to initialize
-    # its own lock file. This prevents conflicts when the daemon's lock file
-    # is still active.
-    unset LOCK
-    unset LOCK_DIR
-    unset TMP_DIR
-    unset LOG_DIR
-    unset LOG_FILENAME
-
-    # Ensure required environment variables are set for processPlanetNotes.sh
-    # SKIP_XML_VALIDATION=true speeds up processing (validation is optional)
-    export SKIP_XML_VALIDATION="${SKIP_XML_VALIDATION:-true}"
-    # Preserve LOG_LEVEL from daemon
-    export LOG_LEVEL="${LOG_LEVEL:-ERROR}"
-    # Ensure DBNAME and other database variables are available
-    export DBNAME="${DBNAME}"
-    export DB_USER="${DB_USER:-}"
-    export DB_HOST="${DB_HOST:-}"
-    export DB_PORT="${DB_PORT:-}"
-    # Execute processPlanetNotes.sh and capture exit code explicitly
-    # This ensures we detect failures even if the script exits early
-    "${NOTES_SYNC_SCRIPT}"
-    local PLANET_SYNC_EXIT_CODE=$?
-    if [[ ${PLANET_SYNC_EXIT_CODE} -eq 0 ]]; then
-     __logi "Planet sync completed successfully"
-     # Reinitialize directories after processPlanetNotes.sh execution
-     # This is critical because we unset TMP_DIR, LOCK_DIR, etc. before
-     # calling processPlanetNotes.sh to avoid lock conflicts, but these
-     # variables are needed for the next cycle (e.g., __check_api_for_updates)
-     __logd "Reinitializing directories after Planet sync"
-     __init_directories "${BASENAME}"
-     # Update DAEMON_SHUTDOWN_FLAG path after reinitializing LOCK_DIR
-     DAEMON_SHUTDOWN_FLAG="${LOCK_DIR}/${BASENAME}_shutdown"
-     # After Planet sync, update timestamp to prevent infinite loop
-     # processPlanetNotes.sh doesn't update max_note_timestamp, so we need to do it here
-     __logi "Updating timestamp after Planet sync"
-     __updateLastValue
-    else
-     __loge "Planet sync failed with exit code: ${PLANET_SYNC_EXIT_CODE}"
-     __loge "Check processPlanetNotes.sh logs for details"
-     __loge "Failed execution marker: /tmp/processPlanetNotes_failed_execution"
-     # Check if lock file permission issue was the cause
-     if [[ -f "${PLANET_LOCK_FILE}" ]] && ! [[ -w "${PLANET_LOCK_FILE}" ]]; then
-      __loge "Lock file permission issue detected: ${PLANET_LOCK_FILE}"
-      local LOCK_OWNER
-      LOCK_OWNER=$(stat -c '%U:%G' "${PLANET_LOCK_FILE}" 2> /dev/null || echo 'unknown')
-      __loge "Lock file owner: ${LOCK_OWNER}"
-      local CURRENT_USER
-      CURRENT_USER=$(whoami 2> /dev/null || echo 'unknown')
-      __loge "Current user: ${CURRENT_USER}"
-     fi
-     # Reinitialize directories so next cycle has TMP_DIR, LOCK, LOCK_DIR set
-     __logd "Reinitializing directories after Planet sync failure"
-     __init_directories "${BASENAME}"
-     DAEMON_SHUTDOWN_FLAG="${LOCK_DIR}/${BASENAME}_shutdown"
-     __log_finish
-     return 1
-    fi
-   else
-    # Process normally (equivalent to __processXMLorPlanet + insertion in processAPINotes.sh)
-    __processXMLorPlanet
-    __insertNewNotesAndComments
-    __loadApiTextComments
-   fi
-  else
-   __logi "No notes to process"
+  if [[ "${TOTAL_NOTES}" -le 0 ]]; then
+   __logi "Paginated page ${PAGE_INDEX} has TOTAL_NOTES=0; stopping pagination"
+   break
   fi
- else
-  __logi "No notes file or file is empty"
- fi
+
+  __logi "Paginated processing ${TOTAL_NOTES} notes (page ${PAGE_INDEX})"
+  if [[ "${TOTAL_NOTES}" -ge "${MAX_NOTES}" ]]; then
+   __logw "Too many notes (${TOTAL_NOTES} >= ${MAX_NOTES}), triggering Planet sync"
+   __logi "Executing: ${NOTES_SYNC_SCRIPT}"
+   local PLANET_LOCK_FILE="${LOCK_DIR}/processPlanetNotes.lock"
+   if [[ -f "${PLANET_LOCK_FILE}" ]]; then
+    __logw "Removing stale lock file: ${PLANET_LOCK_FILE}"
+    if ! rm -f "${PLANET_LOCK_FILE}" 2> /dev/null; then
+     __logw "Could not remove lock file with regular rm, trying with sudo"
+     if command -v sudo > /dev/null 2>&1; then
+      sudo rm -f "${PLANET_LOCK_FILE}" 2> /dev/null || true
+     else
+      __logw "sudo not available, lock file may cause issues"
+     fi
+    fi
+   fi
+
+   unset LOCK
+   unset LOCK_DIR
+   unset TMP_DIR
+   unset LOG_DIR
+   unset LOG_FILENAME
+
+   export SKIP_XML_VALIDATION="${SKIP_XML_VALIDATION:-true}"
+   export LOG_LEVEL="${LOG_LEVEL:-ERROR}"
+   export DBNAME="${DBNAME}"
+   export DB_USER="${DB_USER:-}"
+   export DB_HOST="${DB_HOST:-}"
+   export DB_PORT="${DB_PORT:-}"
+
+   "${NOTES_SYNC_SCRIPT}"
+   local PLANET_SYNC_EXIT_CODE=$?
+   if [[ ${PLANET_SYNC_EXIT_CODE} -eq 0 ]]; then
+    __logi "Planet sync completed successfully"
+    __logd "Reinitializing directories after Planet sync"
+    __init_directories "${BASENAME}"
+    DAEMON_SHUTDOWN_FLAG="${LOCK_DIR}/${BASENAME}_shutdown"
+    __logi "Updating timestamp after Planet sync"
+    __updateLastValue
+    break
+   fi
+
+   __loge "Planet sync failed with exit code: ${PLANET_SYNC_EXIT_CODE}"
+   __loge "Check processPlanetNotes.sh logs for details"
+   __loge "Failed execution marker: /tmp/processPlanetNotes_failed_execution"
+   __log_finish
+   return 1
+  else
+   __processXMLorPlanet
+   __insertNewNotesAndComments
+   __loadApiTextComments
+  fi
+
+  local NEXT_CURSOR
+  NEXT_CURSOR=$(psql -d "${DBNAME}" -Atq -c \
+   "SELECT /* Notes-processAPI-daemon pagination-next */ TO_CHAR(timestamp, E'YYYY-MM-DD\\\"T\\\"HH24:MI:SS\\\"Z\\\"') FROM max_note_timestamp" \
+   2> /dev/null | head -1 || echo "")
+
+  if [[ "${NEXT_CURSOR}" == "" ]]; then
+   __logw "Could not retrieve next pagination cursor; stopping pagination"
+   break
+  fi
+
+  # Move cursor forward by 1s to guarantee progress.
+  #
+  # NOTE: If the OSM API returns a partial result set for the boundary
+  # timestamp bucket (multiple notes with the exact same `updated_at` second
+  # and we cut them with `limit`), advancing to T+1s may temporarily skip
+  # remaining notes from that same second bucket.
+  #
+  # To address this, we rely on the daily Planet-based reconciliation job
+  # (e.g. `checkUpdateNotes`) to eventually re-sync and close any gaps.
+  local NEXT_CURSOR_PLUS
+  NEXT_CURSOR_PLUS=$(date -u -d "${NEXT_CURSOR} +1 second" "+%Y-%m-%dT%H:%M:%SZ" 2> /dev/null || echo "${NEXT_CURSOR}")
+  if [[ "${NEXT_CURSOR_PLUS}" == "${API_CURSOR}" ]]; then
+   __logw "Pagination cursor did not advance; stopping pagination to avoid loop"
+   break
+  fi
+  API_CURSOR="${NEXT_CURSOR_PLUS}"
+ done
 
  # Check and log gaps (equivalent to __check_and_log_gaps in processAPINotes.sh)
  # This helps identify data integrity issues
