@@ -6,7 +6,7 @@
 # Then edit etc/properties.sh with your database credentials.
 #
 # Author: Andres Gomez (AngocA)
-# Version: 2026-03-15
+# Version: 2026-03-26
 
 # Data directory for backups (noteLocation, countries, maritimes). Default: project root/data.
 # Set in etc/properties.sh for production so the service user does not need write access to the repo.
@@ -115,9 +115,15 @@ declare JSON_VALIDATOR="${JSON_VALIDATOR:-jq}"
 # IMPORTANT: You MUST replace 'your-email@domain.com' with your actual email
 # address. This follows OpenStreetMap best practices and allows server
 # administrators to contact you if there are issues with your requests.
+# Global project identity used across logs and HTTP headers.
+declare PROJECT_NAME="${PROJECT_NAME:-OSM-Notes-Ingestion}"
+declare PROJECT_VERSION="${PROJECT_VERSION:-2026-03-26}"
+declare PROJECT_URL="${PROJECT_URL:-https://github.com/OSM-Notes/OSM-Notes-Ingestion}"
+declare PROJECT_CONTACT_EMAIL="${PROJECT_CONTACT_EMAIL:-your-email@domain.com}"
+
 if [[ -z "${DOWNLOAD_USER_AGENT:-}" ]]; then
  # Do not break lines; keep UA in one line for header correctness
- DOWNLOAD_USER_AGENT="OSM-Notes-Ingestion/2025-10-30 (+https://github.com/OSM-Notes/OSM-Notes-Ingestion; contact: your-email@domain.com)"
+ DOWNLOAD_USER_AGENT="${PROJECT_NAME}/${PROJECT_VERSION} (+${PROJECT_URL}; contact: ${PROJECT_CONTACT_EMAIL})"
 fi
 
 # Processing configuration.
@@ -128,6 +134,8 @@ if [[ -z "${LOOP_SIZE:-}" ]]; then
 fi
 
 # Maximum number of notes to download from the API.
+# Runtime logic validates this value against API capabilities
+# (notes maximum_query_limit) and clamps when needed.
 # shellcheck disable=SC2034
 if [[ -z "${MAX_NOTES:-}" ]]; then
  declare -r MAX_NOTES="10000"

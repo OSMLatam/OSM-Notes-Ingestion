@@ -4,8 +4,8 @@
 # This file contains functions for processing API data.
 #
 # Author: Andres Gomez (AngocA)
-# Version: 2026-01-20
-VERSION="2026-01-20"
+# Version: 2026-03-26
+VERSION="2026-03-26"
 
 # Show help function
 function __show_help() {
@@ -204,6 +204,40 @@ function __countXmlNotesAPI() {
 # Related: __check_network_connectivity() (network connectivity check)
 # Related: STANDARD_ERROR_CODES.md (error code definitions)
 ##
+function __resolve_notes_limit_from_capabilities() {
+ __log_start
+ local REQUESTED_LIMIT="$1"
+ local CAPABILITIES_URL="${OSM_API}/capabilities"
+ local CAPABILITIES_FILE
+ local MAX_QUERY_LIMIT
+ local EFFECTIVE_LIMIT="${REQUESTED_LIMIT}"
+
+ CAPABILITIES_FILE=$(mktemp)
+
+ if curl -s --connect-timeout 10 --max-time 20 \
+  -H "User-Agent: ${DOWNLOAD_USER_AGENT}" \
+  -o "${CAPABILITIES_FILE}" "${CAPABILITIES_URL}" 2> /dev/null; then
+  MAX_QUERY_LIMIT=$(sed -n \
+   's/.*<notes[^>]*maximum_query_limit="\([0-9][0-9]*\)".*/\1/p' \
+   "${CAPABILITIES_FILE}" | head -n 1)
+
+  if [[ "${MAX_QUERY_LIMIT}" =~ ^[1-9][0-9]*$ ]]; then
+   if (( REQUESTED_LIMIT > MAX_QUERY_LIMIT )); then
+    EFFECTIVE_LIMIT="${MAX_QUERY_LIMIT}"
+    __logw "MAX_NOTES=${REQUESTED_LIMIT} exceeds API maximum_query_limit=${MAX_QUERY_LIMIT}; using ${EFFECTIVE_LIMIT}"
+   fi
+  else
+   __logw "Could not parse notes maximum_query_limit from capabilities; using MAX_NOTES=${REQUESTED_LIMIT}"
+  fi
+ else
+  __logw "Could not fetch API capabilities; using MAX_NOTES=${REQUESTED_LIMIT}"
+ fi
+
+ rm -f "${CAPABILITIES_FILE}" 2> /dev/null || true
+ echo "${EFFECTIVE_LIMIT}"
+ __log_finish
+}
+
 function __getNewNotesFromApi() {
  __log_start
  __logd "Getting new notes from API."
@@ -211,6 +245,7 @@ function __getNewNotesFromApi() {
  local TEMP_FILE
  local LAST_UPDATE
  local REQUEST
+ local EFFECTIVE_MAX_NOTES
 
  TEMP_FILE=$(mktemp)
 
@@ -253,10 +288,12 @@ function __getNewNotesFromApi() {
 
  # Gets the values from OSM API with the correct URL including date filter
  # shellcheck disable=SC2153,SC2154
- # OSM_API and MAX_NOTES are set by the calling script or environment
- REQUEST="${OSM_API}/notes/search.xml?limit=${MAX_NOTES}&closed=-1&sort=updated_at&from=${LAST_UPDATE}"
+ # OSM_API and MAX_NOTES are set by the calling script or environment.
+ # Clamp MAX_NOTES to API capabilities (notes maximum_query_limit).
+ EFFECTIVE_MAX_NOTES=$(__resolve_notes_limit_from_capabilities "${MAX_NOTES}")
+ REQUEST="${OSM_API}/notes/search.xml?limit=${EFFECTIVE_MAX_NOTES}&closed=-1&sort=updated_at&from=${LAST_UPDATE}"
  __logi "API Request URL: ${REQUEST}"
- __logd "Max notes limit: ${MAX_NOTES}"
+ __logd "Max notes limit (effective): ${EFFECTIVE_MAX_NOTES}"
  __logi "Downloading notes from OSM API..."
 
  # Download notes from API with retry logic
