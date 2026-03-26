@@ -2,7 +2,7 @@
 
 # Script to run updateCountries.sh in hybrid mode (real DB, mocked downloads)
 # Author: Andres Gomez (AngocA)
-# Version: 2026-01-03
+# Version: 2026-03-26
 
 set -euo pipefail
 
@@ -281,7 +281,7 @@ clean_test_database() {
   log_error "cleanupAll.sh failed with exit code: ${cleanup_exit_code}"
   # Show only first few lines to prevent infinite loops
   log_error "Cleanup output (first 15 lines):"
-  echo "${cleanup_output}" | head -15 | while IFS= read -r line || true; do
+  echo "${cleanup_output}" | head -15 | while IFS= read -r line; do
    # Skip empty lines to prevent infinite output
    if [[ -n "${line// /}" ]]; then
     log_error "  ${line}"

@@ -2,13 +2,10 @@
 
 # Note Processing Functions for OSM-Notes-profile
 # Author: Andres Gomez (AngocA)
-# Version: 2026-03-24
+# Version: 2026-03-26
 # shellcheck disable=SC2034
-# 2026-03-24: Extract noteLocation.csv under TMP_DIR (not fixed /tmp).
-# 2026-03-24: Log psql backup load to file; use if psql (no set +e under set -e).
-# 2026-03-24: Do not log every line of psql output at DEBUG (noise, empty rows).
-# 2026-03-24: When echoing backup stats, only NOTICE/WARNING (not psql command tags).
-VERSION="2026-03-24"
+
+VERSION="2026-03-26"
 
 # shellcheck disable=SC2317,SC2155,SC2034
 
@@ -219,7 +216,7 @@ function __getLocationNotes_impl {
   BACKUP_UPDATE_OUTPUT=$(cat "${PSQL_BACKUP_LOG}")
  else
   __loge "PostgreSQL backup load failed. See ${PSQL_BACKUP_LOG}"
-  head -80 "${PSQL_BACKUP_LOG}" | while IFS= read -r LINE || true; do
+  head -80 "${PSQL_BACKUP_LOG}" | while IFS= read -r LINE; do
    __loge "  ${LINE}"
   done
   __log_finish
@@ -236,7 +233,7 @@ function __getLocationNotes_impl {
  # (CREATE INDEX, DO, etc.) with NOTICES; grep -A N alone pulls stray tags.
  if echo "${BACKUP_UPDATE_OUTPUT}" | grep -q "Backup statistics:"; then
   __logi "=== BACKUP STATISTICS ==="
-  while IFS= read -r LINE || true; do
+  while IFS= read -r LINE; do
    [[ -z "${LINE}" ]] && continue
    __logi "${LINE}"
   done < <(echo "${BACKUP_UPDATE_OUTPUT}" | grep -A 12 "Backup statistics:" \
@@ -246,7 +243,7 @@ function __getLocationNotes_impl {
  # Extract and log update results
  if echo "${BACKUP_UPDATE_OUTPUT}" | grep -q "Update results:"; then
   __logi "=== UPDATE RESULTS ==="
-  while IFS= read -r LINE || true; do
+  while IFS= read -r LINE; do
    [[ -z "${LINE}" ]] && continue
    __logi "${LINE}"
   done < <(echo "${BACKUP_UPDATE_OUTPUT}" | grep -A 15 "Update results:" \
@@ -255,7 +252,7 @@ function __getLocationNotes_impl {
 
  # Log warnings if any
  if echo "${BACKUP_UPDATE_OUTPUT}" | grep -q "WARNING:"; then
-  echo "${BACKUP_UPDATE_OUTPUT}" | grep "WARNING:" | while IFS= read -r LINE || true; do
+  echo "${BACKUP_UPDATE_OUTPUT}" | grep "WARNING:" | while IFS= read -r LINE; do
    __logw "${LINE}"
   done
  fi

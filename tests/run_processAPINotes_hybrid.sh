@@ -2,7 +2,7 @@
 
 # Script to run processAPINotes.sh in hybrid mode (real DB, mocked downloads)
 # Author: Andres Gomez (AngocA)
-# Version: 2026-01-19
+# Version: 2026-03-26
 
 set -euo pipefail
 
@@ -183,7 +183,7 @@ clean_test_database() {
   log_error "cleanupAll.sh failed with exit code: ${cleanup_exit_code}"
   # Show only first few lines to prevent infinite loops
   log_error "Cleanup output (first 15 lines):"
-  echo "${cleanup_output}" | head -15 | while IFS= read -r line || true; do
+  echo "${cleanup_output}" | head -15 | while IFS= read -r line; do
    # Skip empty lines to prevent infinite output
    if [[ -n "${line// /}" ]]; then
     log_error "  ${line}"
@@ -649,7 +649,7 @@ cleanup_lock_files() {
  lock_cleanup_result=$(${psql_cmd} -d "${DBNAME}" -Atq -c "
   DELETE FROM properties WHERE key = 'lock';
   SELECT COUNT(*) FROM properties WHERE key = 'lock';
- " 2>/dev/null | head -1 || echo "0")
+ " 2> /dev/null | head -1 || echo "0")
 
  if [[ "${lock_cleanup_result}" =~ ^[0-9]+$ ]] && [[ "${lock_cleanup_result}" -eq 0 ]]; then
   log_info "All database locks cleaned (lock table is now empty)"
@@ -1000,7 +1000,7 @@ run_processAPINotes() {
  log_info "HYBRID_MOCK_DIR: ${HYBRID_MOCK_DIR:-not set}"
  log_info "MOCK_COMMANDS_DIR: ${MOCK_COMMANDS_DIR:-not set}"
  log_info "All hybrid mock environment variables exported for child processes"
- 
+
  # Capture both stdout and stderr to a temporary file to see errors
  local error_log="/tmp/processAPINotes_hybrid_error_$$.log"
  # Ensure RUNNING_IN_SETSID is exported to prevent re-execution with setsid
@@ -1034,7 +1034,7 @@ run_processAPINotes() {
  # We rely on the curl mock working correctly for connectivity checks
  # The mock should handle Pattern 6 (connectivity checks) properly
  # No need for wrapper scripts - the curl mock in PATH should handle it
- # 
+ #
  # However, when MOCK_NOTES_COUNT=0, grep -c returns exit code 1 (no matches found)
  # With set -e active in processAPINotes.sh, this causes the script to exit prematurely
  # We need to create a grep wrapper that handles this case
@@ -1043,7 +1043,7 @@ run_processAPINotes() {
  local grep_wrapper_dir="/tmp/grep_wrapper_$$"
  # Remove any existing grep wrapper directories from PATH
  PATH=$(echo "${PATH}" | tr ':' '\n' | grep -v "grep_wrapper" | tr '\n' ':' | sed 's/:$//')
- mkdir -p "${grep_wrapper_dir}" 2>/dev/null || true
+ mkdir -p "${grep_wrapper_dir}" 2> /dev/null || true
  cat > "${grep_wrapper_dir}/grep" << 'GREP_WRAPPER_EOF'
 #!/bin/bash
 # Wrapper to fix grep -c exit code issue with set -e
@@ -1061,10 +1061,10 @@ else
  exec /usr/bin/grep "$@"
 fi
 GREP_WRAPPER_EOF
- chmod +x "${grep_wrapper_dir}/grep" 2>/dev/null || true
+ chmod +x "${grep_wrapper_dir}/grep" 2> /dev/null || true
  # Add grep wrapper to PATH (before other directories so it takes precedence)
  export PATH="${grep_wrapper_dir}:${PATH}"
- 
+
  if command -v timeout > /dev/null 2>&1; then
   # Run timeout directly (not in background) to properly manage child processes
   # Execute script directly - the curl mock in PATH should handle connectivity checks
@@ -1078,7 +1078,7 @@ GREP_WRAPPER_EOF
   else
    timeout --kill-after=10s 1800s bash -x "${process_script}" > "${error_log}" 2>&1 || script_exit_code=$?
   fi
-  
+
   if [[ ${script_exit_code} -eq 124 ]] || [[ ${script_exit_code} -eq 137 ]]; then
    log_error "Script execution timed out or was killed (exit code: ${script_exit_code})"
    log_error "This may indicate an infinite loop or deadlock in the script"
@@ -1094,53 +1094,53 @@ GREP_WRAPPER_EOF
   # Fallback if timeout command is not available
   bash "${process_script}" > "${error_log}" 2>&1 || script_exit_code=$?
  fi
- 
+
  # Clean up grep wrapper directory
- rm -rf "${grep_wrapper_dir}" 2>/dev/null || true
- 
+ rm -rf "${grep_wrapper_dir}" 2> /dev/null || true
+
  if [[ ${script_exit_code} -ne 0 ]]; then
   log_error "Script failed with exit code: ${script_exit_code}"
-  
+
   # Show first 50 lines to see initialization errors
   if [[ -f "${error_log}" ]] && [[ -s "${error_log}" ]]; then
    log_error "First 50 lines of error log (to see initialization errors):"
-   head -n 50 "${error_log}" 2>/dev/null | while IFS= read -r line || true; do
+   head -n 50 "${error_log}" 2> /dev/null | while IFS= read -r line; do
     if [[ -n "${line}" ]] && [[ -n "${line// /}" ]]; then
      log_error "  ${line}"
     fi
    done || true
   fi
-  
+
   log_error "Full output (last 200 lines):"
-  
+
   # Check if error log file exists and has content
   if [[ -f "${error_log}" ]]; then
    if [[ -s "${error_log}" ]]; then
     # Count total lines first (avoid using arithmetic expansion in sed)
     local total_lines
-    total_lines=$(wc -l < "${error_log}" 2>/dev/null | tr -d ' ' || echo "0")
+    total_lines=$(wc -l < "${error_log}" 2> /dev/null | tr -d ' ' || echo "0")
     log_error "Total lines in error log: ${total_lines}"
     # Get last 200 lines, filter out empty lines completely, then limit to 200 non-empty lines
     # Use grep to filter empty lines BEFORE head to avoid processing empty lines
     # Process directly through pipe to avoid storing in variable (prevents empty line issues)
     local non_empty_count=0
-    tail -n 200 "${error_log}" 2>/dev/null | grep -v '^[[:space:]]*$' | head -200 | while IFS= read -r line || true; do
+    tail -n 200 "${error_log}" 2> /dev/null | grep -v '^[[:space:]]*$' | head -200 | while IFS= read -r line; do
      # Double-check line is not empty before logging
      if [[ -n "${line}" ]] && [[ -n "${line// /}" ]]; then
       log_error "  ${line}"
       non_empty_count=$((non_empty_count + 1))
      fi
     done || true
-    
+
     # If no non-empty lines were found, show a message
     # Note: non_empty_count won't be updated in parent shell due to pipe subshell
     # So we check separately
-    if ! tail -n 200 "${error_log}" 2>/dev/null | grep -q '[^[:space:]]'; then
+    if ! tail -n 200 "${error_log}" 2> /dev/null | grep -q '[^[:space:]]'; then
      log_error "  Error log contains only empty lines (${total_lines} total lines)"
     fi
    else
     local error_log_size
-    error_log_size=$(stat -c%s "${error_log}" 2>/dev/null || wc -c < "${error_log}" 2>/dev/null || echo "0")
+    error_log_size=$(stat -c%s "${error_log}" 2> /dev/null || wc -c < "${error_log}" 2> /dev/null || echo "0")
     log_error "  Error log file exists but is empty or very small (${error_log_size} bytes)"
     log_error "  This suggests the script failed very early, possibly during initialization"
     log_error "  Check if the script exists and is executable: ${process_script}"
@@ -1149,7 +1149,7 @@ GREP_WRAPPER_EOF
     log_error "    - Script path: ${process_script}"
     log_error "    - Script exists: $([ -f "${process_script}" ] && echo 'yes' || echo 'no')"
     log_error "    - Script executable: $([ -x "${process_script}" ] && echo 'yes' || echo 'no')"
-    log_error "    - curl command: $(command -v curl 2>/dev/null || echo 'not found')"
+    log_error "    - curl command: $(command -v curl 2> /dev/null || echo 'not found')"
     log_error "    - PATH contains mock dir: $(echo "${PATH}" | grep -q "${HYBRID_MOCK_DIR:-}" && echo 'yes' || echo 'no')"
     log_error "    - MOCK_NOTES_COUNT: ${MOCK_NOTES_COUNT:-not set}"
     log_error "    - Exit code: ${script_exit_code}"
@@ -1167,10 +1167,10 @@ GREP_WRAPPER_EOF
      # Try to show what was written to the error log (even if it's small)
      # Filter out empty lines before processing
      local error_preview
-     error_preview=$(head -c 500 "${error_log}" 2>/dev/null | grep -v '^[[:space:]]*$' || echo "")
+     error_preview=$(head -c 500 "${error_log}" 2> /dev/null | grep -v '^[[:space:]]*$' || echo "")
      if [[ -n "${error_preview}" ]] && [[ -n "${error_preview// /}" ]]; then
       log_error "  First 500 bytes of error log:"
-      echo "${error_preview}" | while IFS= read -r line || true; do
+      echo "${error_preview}" | while IFS= read -r line; do
        log_error "    ${line}"
       done || true
      else
@@ -1184,13 +1184,13 @@ GREP_WRAPPER_EOF
    log_error "  This suggests the script failed before creating the log file"
    log_error "  Check if the script exists and is executable: ${process_script}"
   fi
-  
+
   # Don't delete error log immediately - keep it for debugging
   # Keep error log file for debugging, especially if it's small (might contain important error info)
   # Only delete if it's completely empty (0 bytes)
   if [[ -f "${error_log}" ]]; then
    local error_log_size
-   error_log_size=$(stat -c%s "${error_log}" 2>/dev/null || wc -c < "${error_log}" 2>/dev/null || echo "0")
+   error_log_size=$(stat -c%s "${error_log}" 2> /dev/null || wc -c < "${error_log}" 2> /dev/null || echo "0")
    if [[ ${error_log_size} -eq 0 ]]; then
     rm -f "${error_log}"
    else
@@ -1199,14 +1199,14 @@ GREP_WRAPPER_EOF
   fi
   return ${script_exit_code}
  fi
- 
+
  # Script succeeded - clean up error log
  if [[ -f "${error_log}" ]]; then
   rm -f "${error_log}"
  fi
 
  local exit_code=$?
- 
+
  # Always clean up lock file after execution (even if script failed)
  # This ensures the next execution doesn't fail due to stale lock file
  local lock_file="/tmp/osm-notes-ingestion/locks/processAPINotes.lock"
@@ -1214,7 +1214,7 @@ GREP_WRAPPER_EOF
   log_info "Cleaning up lock file after execution: ${lock_file}"
   rm -f "${lock_file}"
  fi
- 
+
  if [[ ${exit_code} -eq 0 ]]; then
   log_success "processAPINotes.sh completed successfully (execution #${execution_number})"
 
