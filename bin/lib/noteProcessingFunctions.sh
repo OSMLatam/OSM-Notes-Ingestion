@@ -2670,8 +2670,15 @@ function __retry_osm_api() {
 
   RETRY_COUNT=$((RETRY_COUNT + 1))
   if [[ ${RETRY_COUNT} -lt ${LOCAL_MAX_RETRIES} ]]; then
-   __logw "OSM API call failed on attempt ${RETRY_COUNT}, retrying in ${EXPONENTIAL_DELAY}s"
-   sleep "${EXPONENTIAL_DELAY}"
+  # Add jitter to avoid synchronized retries across multiple workers/hosts.
+  local JITTER_MAX=1
+  if [[ ${EXPONENTIAL_DELAY} -gt 1 ]]; then
+   JITTER_MAX=$((EXPONENTIAL_DELAY / 2))
+  fi
+  local JITTER_SECONDS=$((RANDOM % (JITTER_MAX + 1)))
+  local WAIT_SECONDS=$((EXPONENTIAL_DELAY + JITTER_SECONDS))
+  __logw "OSM API call failed on attempt ${RETRY_COUNT}, retrying in ${WAIT_SECONDS}s (base=${EXPONENTIAL_DELAY}s, jitter=${JITTER_SECONDS}s)"
+  sleep "${WAIT_SECONDS}"
    EXPONENTIAL_DELAY=$((EXPONENTIAL_DELAY * 2))
   fi
  done
