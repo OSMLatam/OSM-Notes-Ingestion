@@ -1100,11 +1100,10 @@ function __process_api_data {
   fi
  fi
 
- # Create API tables and procedures before processing (same as processAPINotes.sh)
- # This ensures tables and procedures exist before processing API data
- # This matches processAPINotes.sh behavior (lines 1296-1299)
+# Ensure procedures exist before processing API data.
+# API staging tables are prepared only after successful download/validation,
+# so previous snapshot is preserved when upstream API is temporarily failing.
  __logi "Ensuring API tables and procedures exist before processing..."
- __prepareApiTables
  __ensureGetCountryFunction
  __createProcedures
 
@@ -1119,13 +1118,21 @@ function __process_api_data {
  fi
 
  if [[ ${API_DOWNLOAD_RESULT} -ne 0 ]]; then
-  __loge "Failed to download notes from API (error code: ${API_DOWNLOAD_RESULT})"
+ __logw "Failed to download notes from API (error code: ${API_DOWNLOAD_RESULT})"
+ __logw "Skipping this cycle without truncating API tables; keeping previous snapshot"
   __log_finish
-  return 1
+ return 0
  fi
 
  # Validate file
- __validateApiNotesFile
+if ! __validateApiNotesFile; then
+ __logw "API notes file validation failed; skipping this cycle without truncating API tables"
+ __log_finish
+ return 0
+fi
+
+# Prepare API staging tables only after download and validation succeeded.
+__prepareApiTables
 
  # Validate and process XML (equivalent to processAPINotes.sh flow)
  # This function handles: validation, counting, processing, insertion
