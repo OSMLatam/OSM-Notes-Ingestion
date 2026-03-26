@@ -2189,7 +2189,7 @@ if ! declare -f __check_overpass_status > /dev/null 2>&1; then
 
   __logd "Checking Overpass API status at ${STATUS_URL}..."
 
- if ! STATUS_OUTPUT=$(curl -s -H "User-Agent: ${DOWNLOAD_USER_AGENT}" "${STATUS_URL}" 2>&1); then
+  if ! STATUS_OUTPUT=$(curl -s -H "User-Agent: ${DOWNLOAD_USER_AGENT}" "${STATUS_URL}" 2>&1); then
    __logw "Could not reach Overpass API status page, assuming available"
    __log_finish
    echo "0"
