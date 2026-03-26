@@ -222,7 +222,7 @@ function __resolve_notes_limit_from_capabilities() {
    "${CAPABILITIES_FILE}" | head -n 1)
 
   if [[ "${MAX_QUERY_LIMIT}" =~ ^[1-9][0-9]*$ ]]; then
-   if (( REQUESTED_LIMIT > MAX_QUERY_LIMIT )); then
+   if ((REQUESTED_LIMIT > MAX_QUERY_LIMIT)); then
     EFFECTIVE_LIMIT="${MAX_QUERY_LIMIT}"
     __logw "MAX_NOTES=${REQUESTED_LIMIT} exceeds API maximum_query_limit=${MAX_QUERY_LIMIT}; using ${EFFECTIVE_LIMIT}"
    fi
@@ -238,13 +238,75 @@ function __resolve_notes_limit_from_capabilities() {
  __log_finish
 }
 
+##
+# Downloads notes from OSM API with dynamic limit fallback
+# Tries requested limit first, then progressively reduces the limit when download
+# attempts fail, to avoid getting blocked by transient 503/timeout conditions.
+#
+# Parameters:
+#   $1: LAST_UPDATE - ISO timestamp used in API from= filter (required)
+#   $2: REQUESTED_LIMIT - Initial notes limit to try (required)
+#
+# Returns:
+#   0: Success - Notes downloaded to API_NOTES_FILE
+#   1: Failure - All dynamic limit attempts failed
+#
+# Side effects:
+#   - Performs multiple API requests if needed
+#   - Writes successful limit to DYNAMIC_API_LIMIT_USED (global variable)
+##
+function __download_api_notes_with_dynamic_limit() {
+ __log_start
+ local LAST_UPDATE="$1"
+ local REQUESTED_LIMIT="$2"
+ local MIN_LIMIT="${MIN_DYNAMIC_NOTES_LIMIT:-100}"
+ local CURRENT_LIMIT="${REQUESTED_LIMIT}"
+ local NEXT_LIMIT
+ local REQUEST
+
+ # Validate dynamic minimum bound.
+ if [[ ! "${MIN_LIMIT}" =~ ^[1-9][0-9]*$ ]]; then
+  MIN_LIMIT=100
+ fi
+
+ if ((MIN_LIMIT > REQUESTED_LIMIT)); then
+  MIN_LIMIT="${REQUESTED_LIMIT}"
+ fi
+
+ while true; do
+  REQUEST="${OSM_API}/notes/search.xml?limit=${CURRENT_LIMIT}&closed=-1&sort=updated_at&from=${LAST_UPDATE}"
+  __logi "API Request URL: ${REQUEST}"
+  __logd "Dynamic API limit attempt: ${CURRENT_LIMIT} (min=${MIN_LIMIT})"
+
+  # Download notes from API with retry logic.
+  if __retry_osm_api "${REQUEST}" "${API_NOTES_FILE}" 5 2 120; then
+   __logi "API notes download succeeded with dynamic limit=${CURRENT_LIMIT}"
+   __log_finish
+   return 0
+  fi
+
+  if ((CURRENT_LIMIT <= MIN_LIMIT)); then
+   __loge "Failed to download API notes with minimum dynamic limit=${MIN_LIMIT}"
+   __log_finish
+   return 1
+  fi
+
+  NEXT_LIMIT=$((CURRENT_LIMIT / 2))
+  if ((NEXT_LIMIT < MIN_LIMIT)); then
+   NEXT_LIMIT="${MIN_LIMIT}"
+  fi
+
+  __logw "API download failed with limit=${CURRENT_LIMIT}; retrying with smaller limit=${NEXT_LIMIT}"
+  CURRENT_LIMIT="${NEXT_LIMIT}"
+ done
+}
+
 function __getNewNotesFromApi() {
  __log_start
  __logd "Getting new notes from API."
 
  local TEMP_FILE
  local LAST_UPDATE
- local REQUEST
  local EFFECTIVE_MAX_NOTES
 
  TEMP_FILE=$(mktemp)
@@ -286,20 +348,16 @@ function __getNewNotesFromApi() {
   return "${ERROR_NO_LAST_UPDATE}"
  fi
 
- # Gets the values from OSM API with the correct URL including date filter
+ # Gets the values from OSM API with the correct URL including date filter.
  # shellcheck disable=SC2153,SC2154
  # OSM_API and MAX_NOTES are set by the calling script or environment.
  # Clamp MAX_NOTES to API capabilities (notes maximum_query_limit).
  EFFECTIVE_MAX_NOTES=$(__resolve_notes_limit_from_capabilities "${MAX_NOTES}")
- REQUEST="${OSM_API}/notes/search.xml?limit=${EFFECTIVE_MAX_NOTES}&closed=-1&sort=updated_at&from=${LAST_UPDATE}"
- __logi "API Request URL: ${REQUEST}"
  __logd "Max notes limit (effective): ${EFFECTIVE_MAX_NOTES}"
  __logi "Downloading notes from OSM API..."
 
- # Download notes from API with retry logic
- # Use longer timeout for large note downloads (120 seconds)
- # 30 seconds is insufficient for 10,000 notes (can be 12MB+)
- if __retry_osm_api "${REQUEST}" "${API_NOTES_FILE}" 5 2 120; then
+ # Download notes from API with retry logic and dynamic limit fallback.
+ if __download_api_notes_with_dynamic_limit "${LAST_UPDATE}" "${EFFECTIVE_MAX_NOTES}"; then
   # Check if file exists (downloaded successfully)
   if [[ ! -f "${API_NOTES_FILE}" ]]; then
    __loge "ERROR: API notes file was not created after download"
