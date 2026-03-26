@@ -18,6 +18,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - **Swap regression guard**: Before swapping, the script now checks how many existing `country_id` would be lost (present in `countries` but missing in `countries_new`) and refuses the swap if that count exceeds max(10, 5% of current). Aligns with the "deleted" notion from `compare_all_country_geometries` and allows a few failures (e.g. 3 Indonesia) but not mass loss.
 - **Overpass response validation**: After download, require at least one element of type `way` in the Overpass JSON; relation-only (truncated) responses are rejected and the next endpoint is tried when using `OVERPASS_ENDPOINTS`.
 - **Documentation**: Installation_Dependencies (full cleanup as DB owner, manual swap reference), Cleanup_Integration (full cleanup in production, manual swap), Countries_Table_Update_Strategy (why automatic swap may not run, manual swap, regression guard), Environment_Variables (OVERPASS_SINGLE_RELATION_TIMEOUT, OVERPASS_ENDPOINTS), properties.sh.example (OVERPASS_ENDPOINTS, OVERPASS_SINGLE_RELATION_TIMEOUT, SWAP_MAX_DELETED_THRESHOLD).
+- **2026-03-26 OSM Notes API hardening**: Adaptive `limit` fallback on transient download failures (e.g. `503`/timeouts) to avoid getting stuck on large requests.
+- **2026-03-26 OSM Notes API resiliency**: Preserve the last known-good snapshot by preparing/truncating API staging tables only after successful download and XML validation.
+- **2026-03-26 OSM Notes API retry tuning**: Exponential backoff with jitter plus clamping `MAX_NOTES` against `/api/0.6/capabilities` (`notes maximum_query_limit`).
+- **2026-03-26 OSM Notes API pagination recovery**: Daemon now retrieves backlog via paginated requests (`order=oldest`) using a moving cursor from `max_note_timestamp`, minimizing Planet resync after crashes. Pagination controls: `API_PAGINATION_PAGE_LIMIT` and `API_PAGINATION_MAX_PAGES`.
 
 ### Fixed
 
