@@ -30,9 +30,7 @@ export SCRIPT_BASE_DIRECTORY="${PROJECT_ROOT}"
 export BASENAME="analyzeDatabasePerformance"
 export TMP_DIR="/tmp/${BASENAME}_$$"
 export LOG_LEVEL="${LOG_LEVEL:-INFO}"
-export SCHEMA_COMPONENT="${SCHEMA_COMPONENT:-core}"
-export EXPECTED_SCHEMA_MIN="${EXPECTED_SCHEMA_MIN:-1.1.0}"
-export EXPECTED_SCHEMA_MAX="${EXPECTED_SCHEMA_MAX:-1.1.x}"
+export SCHEMA_CONSUMER="${SCHEMA_CONSUMER:-monitoring}"
 
 # Set PostgreSQL application name for monitoring
 # This allows monitoring tools to identify which script is using the database

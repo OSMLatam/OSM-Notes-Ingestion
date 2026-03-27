@@ -44,9 +44,10 @@ load "$(dirname "$BATS_TEST_FILENAME")/../../test_helper.bash"
     MISSING_GUARD+=("${SCRIPT#${ROOT}/}")
    fi
 
-   if ! grep -q 'SCHEMA_COMPONENT' "${SCRIPT}" \
+   if ! grep -q 'SCHEMA_CONSUMER' "${SCRIPT}" \
+    && { ! grep -q 'SCHEMA_COMPONENT' "${SCRIPT}" \
     || ! grep -q 'EXPECTED_SCHEMA_MIN' "${SCRIPT}" \
-    || ! grep -q 'EXPECTED_SCHEMA_MAX' "${SCRIPT}"; then
+    || ! grep -q 'EXPECTED_SCHEMA_MAX' "${SCRIPT}"; }; then
     MISSING_CONTRACT_VARS+=("${SCRIPT#${ROOT}/}")
    fi
   fi
@@ -59,7 +60,8 @@ load "$(dirname "$BATS_TEST_FILENAME")/../../test_helper.bash"
  fi
 
  if [[ "${#MISSING_CONTRACT_VARS[@]}" -gt 0 ]]; then
-  echo "Scripts missing schema contract vars (SCHEMA_COMPONENT, EXPECTED_SCHEMA_MIN, EXPECTED_SCHEMA_MAX):"
+  echo "Scripts missing schema contract vars (SCHEMA_CONSUMER"
+  echo "or SCHEMA_COMPONENT + EXPECTED_SCHEMA_MIN/MAX):"
   printf ' - %s\n' "${MISSING_CONTRACT_VARS[@]}"
   false
  fi

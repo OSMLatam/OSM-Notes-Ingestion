@@ -30,9 +30,7 @@ export SCRIPT_BASE_DIRECTORY
 # shellcheck disable=SC1091
 source "${SCRIPT_BASE_DIRECTORY}/lib/osm-common/commonFunctions.sh"
 
-declare SCHEMA_COMPONENT="${SCHEMA_COMPONENT:-core}"
-declare EXPECTED_SCHEMA_MIN="${EXPECTED_SCHEMA_MIN:-1.1.0}"
-declare EXPECTED_SCHEMA_MAX="${EXPECTED_SCHEMA_MAX:-1.1.x}"
+declare SCHEMA_CONSUMER="${SCHEMA_CONSUMER:-monitoring}"
 
 # Input shapefile
 EEZ_SHAPEFILE="${EEZ_SHAPEFILE:-/home/notes/World_EEZ_v12_20231025.zip}"

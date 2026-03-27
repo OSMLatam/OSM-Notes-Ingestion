@@ -51,9 +51,7 @@ trap '' HUP
 declare LOG_LEVEL="${LOG_LEVEL:-ERROR}"
 
 # Schema contract compatibility range for this script.
-declare SCHEMA_COMPONENT="${SCHEMA_COMPONENT:-core}"
-declare EXPECTED_SCHEMA_MIN="${EXPECTED_SCHEMA_MIN:-1.1.0}"
-declare EXPECTED_SCHEMA_MAX="${EXPECTED_SCHEMA_MAX:-1.1.x}"
+declare SCHEMA_CONSUMER="${SCHEMA_CONSUMER:-ingestion}"
 
 # Base directory
 declare SCRIPT_BASE_DIRECTORY
