@@ -9,6 +9,15 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Added
 
+- **2026-03-27 Schema compatibility**: `schema_version` SemVer table for the core DB
+  contract; consumer-specific expected ranges via `etc/schema_compatibility.sh`
+  (ingestion, API, WMS, monitoring); CI validation in
+  `tests/ci/validate_schema_contracts.sh`; diagnostic
+  `bin/monitor/checkSchemaCompatibility.sh`; runbook
+  `docs/Schema_Compatibility_Runbook.md`; coverage tests for DB entrypoints.
+- **2026-03-27 User identity**: Tables `user_identity_history` and
+  `user_identity_conflicts` and SQL procedures for identity tracking and
+  username-collision handling.
 - **Overpass single-relation timeout**: Configurable `OVERPASS_SINGLE_RELATION_TIMEOUT` (default 600s) for country/maritime boundary downloads; avoids default server timeout on large relations (e.g. Indonesia). Documented in `etc/properties.sh.example` and `bin/Environment_Variables.md`.
 - **Swap safety threshold**: `SWAP_MAX_DELETED_THRESHOLD` to cap how many existing countries may be missing in `countries_new` before refusing the swap; effective threshold is max(this value, 5% of current count). Documented in `etc/properties.sh.example` and `docs/Countries_Table_Update_Strategy.md`.
 
@@ -22,6 +31,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - **2026-03-26 OSM Notes API resiliency**: Preserve the last known-good snapshot by preparing/truncating API staging tables only after successful download and XML validation.
 - **2026-03-26 OSM Notes API retry tuning**: Exponential backoff with jitter plus clamping `MAX_NOTES` against `/api/0.6/capabilities` (`notes maximum_query_limit`).
 - **2026-03-26 OSM Notes API pagination recovery**: Daemon now retrieves backlog via paginated requests (`order=oldest`) using a moving cursor from `max_note_timestamp`, minimizing Planet resync after crashes. Pagination controls: `API_PAGINATION_PAGE_LIMIT` and `API_PAGINATION_MAX_PAGES`.
+- **2026-03-27 Schema enforcement**: Scripts validate the DB contract using shared
+  variables and refuse to run when `schema_version` is outside the supported
+  SemVer range.
+- **2026-03-27 User upsert**: Refactored upsert logic for username collisions,
+  conflict recording, and clearer logging in processing scripts.
+- **2026-03-27 Dependencies**: `lib/osm-common` submodule reference updated.
 
 ### Fixed
 
@@ -32,7 +47,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - **Fixed ambiguous return value in `get_country()` function**:
   - **Issue**: Function returned `-1` for both known international waters and unknown countries, causing notes in countries like Brazil, Venezuela, Chile, etc. to be incorrectly marked as international waters
   - **Root Cause**: Function initialized `m_id_country := -1` and returned `COALESCE(m_id_country, -1)`, meaning unknown countries were marked as international waters
-  - **Fix**: 
+  - **Fix**:
     - Changed initialization to `m_id_country := -2` for unknown countries
     - Reserved `-1` ONLY for known international waters (from `international_waters` table)
     - Introduced `-2` for unknown/not found countries
