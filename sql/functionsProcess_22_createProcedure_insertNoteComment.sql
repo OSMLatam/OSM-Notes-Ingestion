@@ -3,9 +3,9 @@
 -- Author: Andres Gomez (AngocA)
 -- Version: 2026-03-25
 
-CREATE OR REPLACE PROCEDURE insert_note_comment (
+CREATE OR REPLACE PROCEDURE insert_note_comment(
   m_note_id INTEGER,
-  m_event note_event_enum,
+  m_event NOTE_EVENT_ENUM,
   m_created_at TIMESTAMP WITH TIME ZONE,
   m_id_user INTEGER,
   m_username VARCHAR(256),
@@ -70,6 +70,27 @@ AS $proc$
   -- Insert a new username, or update the username to an existing user_id.
   -- If username is already bound to a different user_id, skip and log warning.
   IF (m_id_user IS NOT NULL AND m_username IS NOT NULL) THEN
+   BEGIN
+    INSERT INTO user_identity_history (
+     user_id,
+     username,
+     source_process,
+     first_seen,
+     last_seen
+    ) VALUES (
+     m_id_user,
+     m_username,
+     'insert_note_comment',
+     CURRENT_TIMESTAMP,
+     CURRENT_TIMESTAMP
+    ) ON CONFLICT (user_id, username) DO UPDATE
+     SET last_seen = CURRENT_TIMESTAMP,
+      source_process = EXCLUDED.source_process;
+   EXCEPTION
+    WHEN undefined_table THEN
+     NULL;
+   END;
+
    IF EXISTS (
     SELECT 1
     FROM users u
@@ -84,6 +105,32 @@ AS $proc$
       || ', existing_user_id='
       || (SELECT u.user_id FROM users u WHERE u.username = m_username LIMIT 1)
     );
+    BEGIN
+     INSERT INTO user_identity_conflicts (
+      username,
+      incoming_user_id,
+      existing_user_id,
+      source_process,
+      detected_at,
+      last_seen,
+      times_seen
+     ) VALUES (
+      m_username,
+      m_id_user,
+      (SELECT u.user_id FROM users u WHERE u.username = m_username LIMIT 1),
+      'insert_note_comment',
+      CURRENT_TIMESTAMP,
+      CURRENT_TIMESTAMP,
+      1
+     ) ON CONFLICT (
+      username, incoming_user_id, existing_user_id, source_process
+     ) DO UPDATE SET
+      last_seen = CURRENT_TIMESTAMP,
+      times_seen = user_identity_conflicts.times_seen + 1;
+    EXCEPTION
+     WHEN undefined_table THEN
+      NULL;
+    END;
    ELSE
     INSERT INTO users (
      user_id,
@@ -128,8 +175,7 @@ AS $proc$
       || m_event || '.');
     RETURN;
   END;
- END
-$proc$
-;
+END;
+$proc$;
 COMMENT ON PROCEDURE insert_note_comment IS
-  'Inserts a comment of a given note. It updates the note accordingly if closed';
+'Inserts a comment of a given note. It updates the note accordingly if closed';

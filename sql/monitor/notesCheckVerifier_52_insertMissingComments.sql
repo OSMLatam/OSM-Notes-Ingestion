@@ -42,6 +42,47 @@ ON CONFLICT (note_id, sequence_action, detected_at) DO NOTHING;
 SELECT /* Notes-check */ clock_timestamp() AS Processing,
   'Inserting missing users from check comments' AS Text;
 
+CREATE TABLE IF NOT EXISTS user_identity_history (
+  id SERIAL PRIMARY KEY,
+  user_id INTEGER NOT NULL,
+  username VARCHAR(256) NOT NULL,
+  source_process VARCHAR(64) NOT NULL,
+  first_seen TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+  last_seen TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+);
+CREATE TABLE IF NOT EXISTS user_identity_conflicts (
+  id SERIAL PRIMARY KEY,
+  username VARCHAR(256) NOT NULL,
+  incoming_user_id INTEGER NOT NULL,
+  existing_user_id INTEGER NOT NULL,
+  source_process VARCHAR(64) NOT NULL,
+  detected_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+  last_seen TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+  times_seen INTEGER DEFAULT 1,
+  status VARCHAR(32) DEFAULT 'pending_review'
+);
+CREATE UNIQUE INDEX IF NOT EXISTS user_identity_history_uniq
+  ON user_identity_history (user_id, username);
+CREATE UNIQUE INDEX IF NOT EXISTS user_identity_conflicts_uniq
+  ON user_identity_conflicts
+  (username, incoming_user_id, existing_user_id, source_process);
+
+INSERT INTO user_identity_history (
+  user_id, username, source_process, first_seen, last_seen
+)
+SELECT DISTINCT
+  id_user,
+  username,
+  'notesCheckVerifier',
+  CURRENT_TIMESTAMP,
+  CURRENT_TIMESTAMP
+FROM note_comments_check
+WHERE id_user IS NOT NULL
+  AND username IS NOT NULL
+ON CONFLICT (user_id, username) DO UPDATE SET
+  last_seen = CURRENT_TIMESTAMP,
+  source_process = EXCLUDED.source_process;
+
 INSERT INTO users (user_id, username)
 SELECT /* Notes-check */
   id_user,
@@ -80,6 +121,33 @@ INNER JOIN users u ON u.username = ncc.username
 WHERE ncc.id_user IS NOT NULL
   AND ncc.username IS NOT NULL
   AND u.user_id <> ncc.id_user;
+
+INSERT INTO user_identity_conflicts (
+  username,
+  incoming_user_id,
+  existing_user_id,
+  source_process,
+  detected_at,
+  last_seen,
+  times_seen
+)
+SELECT DISTINCT
+  ncc.username,
+  ncc.id_user,
+  u.user_id,
+  'notesCheckVerifier',
+  CURRENT_TIMESTAMP,
+  CURRENT_TIMESTAMP,
+  1
+FROM note_comments_check ncc
+INNER JOIN users u ON u.username = ncc.username
+WHERE ncc.id_user IS NOT NULL
+  AND ncc.username IS NOT NULL
+  AND u.user_id <> ncc.id_user
+ON CONFLICT (username, incoming_user_id, existing_user_id, source_process)
+DO UPDATE SET
+  last_seen = CURRENT_TIMESTAMP,
+  times_seen = user_identity_conflicts.times_seen + 1;
 
 -- Insert missing comments from check to main tables
 SELECT /* Notes-check */ clock_timestamp() AS Processing,

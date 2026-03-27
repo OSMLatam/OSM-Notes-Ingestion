@@ -1,7 +1,7 @@
 -- Create constraints in base tables.
 --
 -- Author: Andres Gomez (AngocA)
--- Version: 2025-11-25
+-- Version: 2026-03-25
 
 -- Users table already has PRIMARY KEY defined in CREATE TABLE
 -- ALTER TABLE users
@@ -143,3 +143,29 @@ CREATE UNIQUE INDEX username_uniq
  ON users
  (username);
 COMMENT ON INDEX username_uniq IS 'Username is unique. Used by: Ingestion (uniqueness constraint), API (unique user lookups), Analytics (duplicate prevention)';
+
+-- Identity history uniqueness and lookups.
+CREATE UNIQUE INDEX IF NOT EXISTS user_identity_history_uniq
+ ON user_identity_history
+ (user_id, username);
+COMMENT ON INDEX user_identity_history_uniq IS
+  'Unique mapping history for user_id and username pairs';
+
+CREATE INDEX IF NOT EXISTS user_identity_history_username_idx
+ ON user_identity_history
+ (username);
+COMMENT ON INDEX user_identity_history_username_idx IS
+  'Lookup history by username';
+
+-- Identity conflict deduplication and lookups.
+CREATE UNIQUE INDEX IF NOT EXISTS user_identity_conflicts_uniq
+ ON user_identity_conflicts
+ (username, incoming_user_id, existing_user_id, source_process);
+COMMENT ON INDEX user_identity_conflicts_uniq IS
+  'Unique logical identity conflict event';
+
+CREATE INDEX IF NOT EXISTS user_identity_conflicts_username_idx
+ ON user_identity_conflicts
+ (username, detected_at DESC);
+COMMENT ON INDEX user_identity_conflicts_username_idx IS
+  'Lookup conflicts by username with recent events first';

@@ -8,6 +8,31 @@ DO $$
 DECLARE
   v_qty INTEGER;
 BEGIN
+  CREATE TEMP TABLE user_identity_history (
+    id SERIAL PRIMARY KEY,
+    user_id INTEGER NOT NULL,
+    username VARCHAR(256) NOT NULL,
+    source_process VARCHAR(64) NOT NULL,
+    first_seen TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    last_seen TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+  ) ON COMMIT DROP;
+  CREATE TEMP TABLE user_identity_conflicts (
+    id SERIAL PRIMARY KEY,
+    username VARCHAR(256) NOT NULL,
+    incoming_user_id INTEGER NOT NULL,
+    existing_user_id INTEGER NOT NULL,
+    source_process VARCHAR(64) NOT NULL,
+    detected_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    last_seen TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    times_seen INTEGER DEFAULT 1,
+    status VARCHAR(32) DEFAULT 'pending_review'
+  ) ON COMMIT DROP;
+  CREATE UNIQUE INDEX user_identity_history_uniq
+    ON user_identity_history (user_id, username);
+  CREATE UNIQUE INDEX user_identity_conflicts_uniq
+    ON user_identity_conflicts
+    (username, incoming_user_id, existing_user_id, source_process);
+
   -- Baseline users:
   -- user_id=1001 owns username 'TimeSplitter'
   -- user_id=1002 exists with another username.
@@ -49,6 +74,26 @@ BEGIN
       AND u2.user_id <> users.user_id
   );
 
+  INSERT INTO user_identity_history (
+    user_id,
+    username,
+    source_process,
+    first_seen,
+    last_seen
+  )
+  SELECT DISTINCT
+    id_user,
+    username,
+    'processAPINotes',
+    CURRENT_TIMESTAMP,
+    CURRENT_TIMESTAMP
+  FROM note_comments_api
+  WHERE id_user IS NOT NULL
+    AND username IS NOT NULL
+  ON CONFLICT (user_id, username) DO UPDATE SET
+    last_seen = CURRENT_TIMESTAMP,
+    source_process = EXCLUDED.source_process;
+
   INSERT INTO logs (message)
   SELECT DISTINCT
     'WARNING: Username conflict skipped in users upsert. username='
@@ -62,6 +107,34 @@ BEGIN
   WHERE nca.id_user IS NOT NULL
     AND nca.username IS NOT NULL
     AND u.user_id <> nca.id_user;
+
+  INSERT INTO user_identity_conflicts (
+    username,
+    incoming_user_id,
+    existing_user_id,
+    source_process,
+    detected_at,
+    last_seen,
+    times_seen
+  )
+  SELECT DISTINCT
+    nca.username,
+    nca.id_user,
+    u.user_id,
+    'processAPINotes',
+    CURRENT_TIMESTAMP,
+    CURRENT_TIMESTAMP,
+    1
+  FROM note_comments_api nca
+  INNER JOIN users u ON u.username = nca.username
+  WHERE nca.id_user IS NOT NULL
+    AND nca.username IS NOT NULL
+    AND u.user_id <> nca.id_user
+  ON CONFLICT (
+    username, incoming_user_id, existing_user_id, source_process
+  ) DO UPDATE SET
+    last_seen = CURRENT_TIMESTAMP,
+    times_seen = user_identity_conflicts.times_seen + 1;
 
   SELECT COUNT(*)
   INTO v_qty
@@ -79,6 +152,27 @@ BEGIN
     'WARNING: Username conflict skipped in users upsert.%incoming_user_id=1002%';
   IF v_qty < 1 THEN
     RAISE EXCEPTION 'Test 1 failed: expected warning log not found';
+  END IF;
+
+  SELECT COUNT(*)
+  INTO v_qty
+  FROM user_identity_history
+  WHERE user_id = 1002
+    AND username = 'TimeSplitter'
+    AND source_process = 'processAPINotes';
+  IF v_qty <> 1 THEN
+    RAISE EXCEPTION 'Test 1 failed: expected history row not found';
+  END IF;
+
+  SELECT COUNT(*)
+  INTO v_qty
+  FROM user_identity_conflicts
+  WHERE username = 'TimeSplitter'
+    AND incoming_user_id = 1002
+    AND existing_user_id = 1001
+    AND source_process = 'processAPINotes';
+  IF v_qty <> 1 THEN
+    RAISE EXCEPTION 'Test 1 failed: expected conflict row not found';
   END IF;
   RAISE NOTICE 'Test 1 passed: processAPINotes collision is skipped';
 
@@ -256,6 +350,25 @@ BEGIN
   IF v_qty < 2 THEN
     RAISE EXCEPTION
       'Test 4 failed: expected additional warning log not found';
+  END IF;
+
+  SELECT COUNT(*)
+  INTO v_qty
+  FROM user_identity_history
+  WHERE user_id = 1002
+    AND username = 'TimeSplitter';
+  IF v_qty < 1 THEN
+    RAISE EXCEPTION 'Test 4 failed: expected history row from procedure';
+  END IF;
+
+  SELECT COUNT(*)
+  INTO v_qty
+  FROM user_identity_conflicts
+  WHERE username = 'TimeSplitter'
+    AND incoming_user_id = 1002
+    AND source_process = 'insert_note_comment';
+  IF v_qty <> 1 THEN
+    RAISE EXCEPTION 'Test 4 failed: expected procedure conflict row';
   END IF;
 
   DELETE FROM note_comments WHERE note_id = 991001;

@@ -1,7 +1,7 @@
 -- Create base tables and some indexes.
 --
 -- Author: Andres Gomez (AngocA)
--- Version: 2025-12-14
+-- Version: 2026-03-25
 
 CREATE TABLE IF NOT EXISTS users (
  user_id INTEGER NOT NULL PRIMARY KEY,
@@ -11,6 +11,57 @@ COMMENT ON TABLE users IS 'OSM user id';
 COMMENT ON COLUMN users.user_id IS 'OSM user id';
 COMMENT ON COLUMN users.username IS
   'Name of the user for the last note action';
+
+CREATE TABLE IF NOT EXISTS user_identity_history (
+ id SERIAL PRIMARY KEY,
+ user_id INTEGER NOT NULL,
+ username VARCHAR(256) NOT NULL,
+ source_process VARCHAR(64) NOT NULL,
+ first_seen TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+ last_seen TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+);
+COMMENT ON TABLE user_identity_history IS
+  'History of observed user_id and username mappings';
+COMMENT ON COLUMN user_identity_history.user_id IS
+  'Observed OSM user id';
+COMMENT ON COLUMN user_identity_history.username IS
+  'Observed username for that user id';
+COMMENT ON COLUMN user_identity_history.source_process IS
+  'Process that observed the mapping';
+COMMENT ON COLUMN user_identity_history.first_seen IS
+  'First time this mapping was observed';
+COMMENT ON COLUMN user_identity_history.last_seen IS
+  'Most recent time this mapping was observed';
+
+CREATE TABLE IF NOT EXISTS user_identity_conflicts (
+ id SERIAL PRIMARY KEY,
+ username VARCHAR(256) NOT NULL,
+ incoming_user_id INTEGER NOT NULL,
+ existing_user_id INTEGER NOT NULL,
+ source_process VARCHAR(64) NOT NULL,
+ detected_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+ last_seen TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+ times_seen INTEGER DEFAULT 1,
+ status VARCHAR(32) DEFAULT 'pending_review'
+);
+COMMENT ON TABLE user_identity_conflicts IS
+  'Tracks username collisions where same username appears with different user ids';
+COMMENT ON COLUMN user_identity_conflicts.username IS
+  'Username involved in the collision';
+COMMENT ON COLUMN user_identity_conflicts.incoming_user_id IS
+  'User id from incoming data';
+COMMENT ON COLUMN user_identity_conflicts.existing_user_id IS
+  'User id already stored for the username';
+COMMENT ON COLUMN user_identity_conflicts.source_process IS
+  'Process that detected the collision';
+COMMENT ON COLUMN user_identity_conflicts.detected_at IS
+  'First detection timestamp';
+COMMENT ON COLUMN user_identity_conflicts.last_seen IS
+  'Most recent detection timestamp';
+COMMENT ON COLUMN user_identity_conflicts.times_seen IS
+  'How many times this same collision was detected';
+COMMENT ON COLUMN user_identity_conflicts.status IS
+  'Review status for operational follow-up';
 
 CREATE TABLE IF NOT EXISTS notes (
  note_id INTEGER NOT NULL, -- id
