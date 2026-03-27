@@ -124,6 +124,11 @@ jobs:
           echo "Checking bash code formatting..."
           find bin -name "*.sh" -type f -exec shfmt -d -i 1 -sr -bn {} \;
 
+      - name: Validate schema contracts against target version
+        run: |
+          chmod +x tests/ci/validate_schema_contracts.sh
+          tests/ci/validate_schema_contracts.sh
+
       - name: Install SQLFluff
         run: |
           sudo apt-get update
