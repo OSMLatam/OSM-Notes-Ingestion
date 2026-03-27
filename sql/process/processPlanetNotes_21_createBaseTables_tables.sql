@@ -153,6 +153,20 @@ COMMENT ON TABLE properties IS 'Properties table for base load';
 COMMENT ON COLUMN properties.key IS 'Property name';
 COMMENT ON COLUMN properties.value IS 'Property value';
 
+CREATE TABLE IF NOT EXISTS schema_version (
+ component VARCHAR(64) PRIMARY KEY,
+ version VARCHAR(16) NOT NULL,
+ updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+);
+COMMENT ON TABLE schema_version IS
+  'Schema version contract for DB consumers';
+COMMENT ON COLUMN schema_version.component IS
+  'Schema component identifier';
+COMMENT ON COLUMN schema_version.version IS
+  'Schema semantic version (MAJOR.MINOR.PATCH)';
+COMMENT ON COLUMN schema_version.updated_at IS
+  'Timestamp when schema version was updated';
+
 CREATE TABLE IF NOT EXISTS license (
  license_name VARCHAR(256) NOT NULL PRIMARY KEY,
  data_source VARCHAR(256) NOT NULL
@@ -173,6 +187,14 @@ ON CONFLICT (license_name) DO NOTHING;
 INSERT INTO properties (key, value) VALUES
   ('initialLoadNotes', 'true'),
   ('initialLoadComments', 'true');
+
+-- Set current schema contract version (SemVer).
+-- 1.1.0: Adds identity history/conflict entities without breaking old tables.
+INSERT INTO schema_version (component, version) VALUES
+  ('core', '1.1.0')
+ON CONFLICT (component) DO UPDATE
+  SET version = EXCLUDED.version,
+    updated_at = CURRENT_TIMESTAMP;
 
 -- Create trigger to update timestamp on properties table
 CREATE OR REPLACE FUNCTION update_properties_timestamp()

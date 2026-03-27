@@ -30,8 +30,8 @@
 # * shfmt -w -i 1 -sr -bn notesCheckVerifier.sh
 #
 # Author: Andres Gomez (AngocA)
-# Version: 2026-01-08
-VERSION="2026-01-08"
+# Version: 2026-03-27
+VERSION="2026-03-27"
 
 #set -xv
 # Fails when a variable is not initialized.
@@ -45,6 +45,11 @@ set -E
 
 # Logger levels: TRACE, DEBUG, INFO, WARN, ERROR, FATAL.
 declare LOG_LEVEL="${LOG_LEVEL:-ERROR}"
+
+# Schema contract compatibility range for this script.
+declare SCHEMA_COMPONENT="${SCHEMA_COMPONENT:-core}"
+declare EXPECTED_SCHEMA_MIN="${EXPECTED_SCHEMA_MIN:-1.1.0}"
+declare EXPECTED_SCHEMA_MAX="${EXPECTED_SCHEMA_MAX:-1.1.x}"
 
 # Clean files.
 declare CLEAN="${CLEAN:-true}"
@@ -185,6 +190,7 @@ function __checkPrereqs {
  set +e
  # Checks prereqs.
  __checkPrereqsCommands
+ __assert_schema_compatible
 
  ## Validate process file if provided
  if [[ "${PROCESS_FILE}" != "" ]]; then

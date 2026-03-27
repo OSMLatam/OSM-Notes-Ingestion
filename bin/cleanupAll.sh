@@ -11,8 +11,8 @@
 # 255) General error
 #
 # Author: Andres Gomez (AngocA)
-# Version: 2025-12-20
-VERSION="2025-12-20"
+# Version: 2026-03-27
+VERSION="2026-03-27"
 
 set -euo pipefail
 # shellcheck disable=SC2310,SC2312
@@ -22,6 +22,9 @@ BASENAME="cleanupAll"
 # Set PostgreSQL application name for monitoring
 # This allows monitoring tools to identify which script is using the database
 export PGAPPNAME="${BASENAME}"
+export SCHEMA_COMPONENT="${SCHEMA_COMPONENT:-core}"
+export EXPECTED_SCHEMA_MIN="${EXPECTED_SCHEMA_MIN:-1.1.0}"
+export EXPECTED_SCHEMA_MAX="${EXPECTED_SCHEMA_MAX:-1.1.x}"
 
 TMP_DIR="/tmp/${BASENAME}_$$"
 mkdir -p "${TMP_DIR}"
@@ -848,6 +851,9 @@ function main() {
   exit 1
  fi
  local TARGET_DB="${DBNAME}"
+
+ # Validate schema contract compatibility before cleanup operations.
+ __assert_schema_compatible
 
  # Prevent concurrent executions using flock
  __logi "Checking for concurrent executions..."

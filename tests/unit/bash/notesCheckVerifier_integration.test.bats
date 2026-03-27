@@ -91,6 +91,13 @@ teardown() {
  [[ "${output}" == *"version"* ]] || [[ "${output}" == *"Mock"* ]]
 }
 
+@test "notesCheckVerifier should enforce schema compatibility on prereqs" {
+ export TEST_BASE_DIR="${SCRIPT_BASE_DIRECTORY}"
+ run bash -c "export TEST_BASE_DIR='${SCRIPT_BASE_DIRECTORY}'; setup_test_properties; source ${SCRIPT_BASE_DIRECTORY}/bin/monitor/notesCheckVerifier.sh > /dev/null 2>&1; declare -f __checkPrereqs"
+ [[ "${status}" -eq 0 ]]
+ [[ "${output}" == *"__assert_schema_compatible"* ]]
+}
+
 # Test that notesCheckVerifier.sh can run in dry-run mode
 @test "notesCheckVerifier.sh should work in dry-run mode" {
  # Test that the script can run without actually verifying notes
@@ -133,10 +140,10 @@ teardown() {
  source "${SCRIPT_BASE_DIRECTORY}/bin/monitor/notesCheckVerifier.sh" 2> /dev/null
  set -e
 
-  # Test that available functions don't produce errors
-  export TEST_BASE_DIR="${SCRIPT_BASE_DIRECTORY}"
-  run bash -c "export TEST_BASE_DIR='${SCRIPT_BASE_DIRECTORY}'; setup_test_properties; source ${SCRIPT_BASE_DIRECTORY}/bin/monitor/notesCheckVerifier.sh && __checkPrereqs"
-  [[ "${status}" -eq 0 ]] || [[ "${status}" -eq 239 ]] || [[ "${status}" -eq 241 ]]
+ # Test that available functions don't produce errors
+ export TEST_BASE_DIR="${SCRIPT_BASE_DIRECTORY}"
+ run bash -c "export TEST_BASE_DIR='${SCRIPT_BASE_DIRECTORY}'; setup_test_properties; source ${SCRIPT_BASE_DIRECTORY}/bin/monitor/notesCheckVerifier.sh && __checkPrereqs"
+ [[ "${status}" -eq 0 ]] || [[ "${status}" -eq 239 ]] || [[ "${status}" -eq 241 ]]
  [[ "${output}" != *"orden no encontrada"* ]]
  [[ "${output}" != *"command not found"* ]]
  # Accept any output as long as it doesn't contain command not found errors
@@ -190,7 +197,7 @@ teardown() {
  # Extract just the number from PostgreSQL output (remove header and formatting)
  local COUNT
  COUNT=$(echo "${output}" | tr -d ' \n\r' | grep -oE '[0-9]+' | head -n 1)
- 
+
  # Verify we got a valid count
  if [[ -z "${COUNT}" ]]; then
   # Clean up database before failing
@@ -346,9 +353,9 @@ SQL
  # Note 3: should NOT be marked (already hidden)
  # Note 4: should NOT be marked (exists in both tables)
  # Note 5: should NOT be marked (created today, should be excluded)
- 
+
  # Use SQL to calculate dates for better compatibility
- psql -d "${TEST_DBNAME}" <<SQL
+ psql -d "${TEST_DBNAME}" << SQL
   DO \$\$
   DECLARE
     v_yesterday DATE;
@@ -381,7 +388,6 @@ SQL
     VALUES (5, 44.0, -78.0, v_today + INTERVAL '10 hours', 'open', NULL);
   END \$\$;
 SQL
-
 
  # Execute the SQL script
  run psql -d "${TEST_DBNAME}" -f \

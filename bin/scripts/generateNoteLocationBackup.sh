@@ -8,7 +8,8 @@
 # 255) General error
 #
 # Author: Andres Gomez (AngocA)
-# Version: 2026-03-15
+# Version: 2026-03-27
+VERSION="2026-03-27"
 
 # Base directory for the project.
 SCRIPT_BASE_DIRECTORY="$(cd "$(dirname "${BASH_SOURCE[0]}")/../.." \
@@ -26,6 +27,9 @@ export PGAPPNAME="${BASENAME}"
 
 # Logger levels: TRACE, DEBUG, INFO, WARN, ERROR, FATAL.
 declare LOG_LEVEL="${LOG_LEVEL:-INFO}"
+declare SCHEMA_COMPONENT="${SCHEMA_COMPONENT:-core}"
+declare EXPECTED_SCHEMA_MIN="${EXPECTED_SCHEMA_MIN:-1.1.0}"
+declare EXPECTED_SCHEMA_MAX="${EXPECTED_SCHEMA_MAX:-1.1.x}"
 
 # Load common functions
 # shellcheck disable=SC1091
@@ -49,6 +53,7 @@ main() {
 
  __log_start
  __logi "Generating note location backup..."
+ __assert_schema_compatible
 
  # Check database connection
  __logd "Checking database connection..."

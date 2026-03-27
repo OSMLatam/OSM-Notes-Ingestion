@@ -37,8 +37,8 @@
 # * shfmt -w -i 1 -sr -bn processCheckPlanetNotes.sh
 #
 # Author: Andres Gomez (AngocA)
-# Version: 2026-03-24
-VERSION="2026-03-24"
+# Version: 2026-03-27
+VERSION="2026-03-27"
 
 #set -xv
 # Fails when a variable is not initialized.
@@ -52,6 +52,11 @@ set -E
 
 # Logger levels: TRACE, DEBUG, INFO, WARN, ERROR, FATAL.
 declare LOG_LEVEL="${LOG_LEVEL:-ERROR}"
+
+# Schema contract compatibility range for this script.
+declare SCHEMA_COMPONENT="${SCHEMA_COMPONENT:-core}"
+declare EXPECTED_SCHEMA_MIN="${EXPECTED_SCHEMA_MIN:-1.1.0}"
+declare EXPECTED_SCHEMA_MAX="${EXPECTED_SCHEMA_MAX:-1.1.x}"
 
 # Base directory for the project.
 # Only set SCRIPT_BASE_DIRECTORY if not already defined (e.g., in test environment)
@@ -164,6 +169,7 @@ function __checkPrereqs {
  # Note: __checkPrereqsCommands calls __validate_properties which will exit
  # if DBNAME is not set, so we don't need set +e here
  __checkPrereqsCommands
+ __assert_schema_compatible
 
  ## Validate SQL script files using centralized validation
  __logi "Validating SQL script files..."

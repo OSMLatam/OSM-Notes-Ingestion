@@ -52,8 +52,8 @@
 # For contributing: shellcheck -x -o all updateCountries.sh && shfmt -w -i 1 -sr -bn updateCountries.sh
 #
 # Author: Andres Gomez (AngocA)
-# Version: 2026-03-26
-VERSION="2026-03-26"
+# Version: 2026-03-27
+VERSION="2026-03-27"
 
 #set -xv
 # Fails when a variable is not initialized.
@@ -71,6 +71,11 @@ set -E
 
 # Logger levels: TRACE, DEBUG, INFO, WARN, ERROR, FATAL.
 declare LOG_LEVEL="${LOG_LEVEL:-ERROR}"
+
+# Schema contract compatibility range for this script.
+declare SCHEMA_COMPONENT="${SCHEMA_COMPONENT:-core}"
+declare EXPECTED_SCHEMA_MIN="${EXPECTED_SCHEMA_MIN:-1.1.0}"
+declare EXPECTED_SCHEMA_MAX="${EXPECTED_SCHEMA_MAX:-1.1.x}"
 
 # Base directory for the project.
 # Only set SCRIPT_BASE_DIRECTORY if not already defined (e.g., in test environment)
@@ -234,6 +239,7 @@ function __checkPrereqs {
  # Validate prerequisites: commands, DB connection, and functions
  __checkPrereqsCommands
  __checkPrereqs_functions
+ __assert_schema_compatible
  __log_finish
 }
 

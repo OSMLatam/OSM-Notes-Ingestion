@@ -14,7 +14,7 @@
 # 255) General error
 #
 # Author: Andres Gomez (AngocA)
-# Version: 2025-12-08
+# Version: 2026-03-27
 
 set -euo pipefail
 
@@ -30,6 +30,9 @@ export SCRIPT_BASE_DIRECTORY="${PROJECT_ROOT}"
 export BASENAME="analyzeDatabasePerformance"
 export TMP_DIR="/tmp/${BASENAME}_$$"
 export LOG_LEVEL="${LOG_LEVEL:-INFO}"
+export SCHEMA_COMPONENT="${SCHEMA_COMPONENT:-core}"
+export EXPECTED_SCHEMA_MIN="${EXPECTED_SCHEMA_MIN:-1.1.0}"
+export EXPECTED_SCHEMA_MAX="${EXPECTED_SCHEMA_MAX:-1.1.x}"
 
 # Set PostgreSQL application name for monitoring
 # This allows monitoring tools to identify which script is using the database
@@ -60,6 +63,9 @@ if [[ -z "${DBNAME}" ]]; then
  # ERROR_INVALID_ARGUMENT is defined in lib/osm-common/commonFunctions.sh
  exit "${ERROR_INVALID_ARGUMENT}"
 fi
+
+# Validate schema contract compatibility before running analysis.
+__assert_schema_compatible
 
 # Analysis directory
 ANALYSIS_DIR="${PROJECT_ROOT}/sql/analysis"
@@ -123,7 +129,7 @@ EXAMPLES:
   $0 --verbose
 
 AUTHOR: Andres Gomez (AngocA)
-VERSION: 2025-11-25
+VERSION: 2026-03-27
 EOF
 }
 

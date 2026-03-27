@@ -18,8 +18,8 @@
 #   - systemd: See examples/systemd/osm-notes-ingestion-daemon.service (recommended)
 #
 # Author: Andres Gomez (AngocA)
-# Version: 2026-03-25
-VERSION="2026-03-25"
+# Version: 2026-03-27
+VERSION="2026-03-27"
 # 2026-03-15: After Planet --base exit 0, verify countries table exists before reporting success.
 
 # IMPORTANT: This daemon sources processAPINotes.sh to reuse all its functions
@@ -49,6 +49,11 @@ trap '' HUP
 
 # Logger levels
 declare LOG_LEVEL="${LOG_LEVEL:-ERROR}"
+
+# Schema contract compatibility range for this script.
+declare SCHEMA_COMPONENT="${SCHEMA_COMPONENT:-core}"
+declare EXPECTED_SCHEMA_MIN="${EXPECTED_SCHEMA_MIN:-1.1.0}"
+declare EXPECTED_SCHEMA_MAX="${EXPECTED_SCHEMA_MAX:-1.1.x}"
 
 # Base directory
 declare SCRIPT_BASE_DIRECTORY
@@ -292,6 +297,7 @@ if ! declare -f __checkPrereqs > /dev/null 2>&1; then
   # Checks prereqs.
   __checkPrereqsCommands
   __checkPrereqs_functions
+  __assert_schema_compatible
   __log_finish
  }
 fi

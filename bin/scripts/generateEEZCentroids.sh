@@ -16,7 +16,8 @@
 #   See data/eez_analysis/LICENSE for full license details.
 #
 # Author: Andres Gomez (AngocA)
-# Version: 2026-03-15
+# Version: 2026-03-27
+VERSION="2026-03-27"
 
 set -euo pipefail
 set -E
@@ -28,6 +29,10 @@ export SCRIPT_BASE_DIRECTORY
 # Load common functions
 # shellcheck disable=SC1091
 source "${SCRIPT_BASE_DIRECTORY}/lib/osm-common/commonFunctions.sh"
+
+declare SCHEMA_COMPONENT="${SCHEMA_COMPONENT:-core}"
+declare EXPECTED_SCHEMA_MIN="${EXPECTED_SCHEMA_MIN:-1.1.0}"
+declare EXPECTED_SCHEMA_MAX="${EXPECTED_SCHEMA_MAX:-1.1.x}"
 
 # Input shapefile
 EEZ_SHAPEFILE="${EEZ_SHAPEFILE:-/home/notes/World_EEZ_v12_20231025.zip}"
@@ -229,6 +234,7 @@ __extract_centroids() {
 main() {
  __log_start
  __logi "Starting EEZ centroids extraction from shapefile..."
+ __assert_schema_compatible
 
  __extract_centroids
 
