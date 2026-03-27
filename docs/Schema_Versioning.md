@@ -1,8 +1,8 @@
-## Schema Versioning
+# Schema Versioning
 
 This project uses a lightweight schema contract based on Semantic Versioning.
 
-### Table
+## Table
 
 The table `schema_version` stores the active schema contract:
 
@@ -10,11 +10,11 @@ The table `schema_version` stores the active schema contract:
 - `version`: semantic version in format `MAJOR.MINOR.PATCH`
 - `updated_at`: timestamp of the last version update
 
-### Current version
+## Current version
 
 - `core`: `1.1.0`
 
-### SemVer policy
+## SemVer policy
 
 - **MAJOR**: Breaking schema changes for consumers.
   - Example: remove/rename table or column used by API/WMS/Monitoring.
@@ -24,7 +24,7 @@ The table `schema_version` stores the active schema contract:
   - Example: index tuning, constraints fixes that do not alter expected
     external schema usage.
 
-### Why `1.1.0` for this change
+## Why `1.1.0` for this change
 
 The identity-collision work adds new entities:
 
@@ -33,3 +33,12 @@ The identity-collision work adds new entities:
 
 It does not remove or rename existing public tables/columns, so this is
 treated as a backward-compatible **MINOR** change.
+
+## Diagnostics and operations
+
+- Quick runtime diagnostic:
+  `./bin/monitor/checkSchemaCompatibility.sh`
+- CI validation command:
+  `tests/ci/validate_schema_contracts.sh`
+- Operational mismatch steps:
+  `docs/Schema_Compatibility_Runbook.md`
