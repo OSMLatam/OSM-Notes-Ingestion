@@ -1,7 +1,7 @@
 -- Procedure to insert a note comment.
 --
 -- Author: Andres Gomez (AngocA)
--- Version: 2025-11-24
+-- Version: 2026-03-25
 
 CREATE OR REPLACE PROCEDURE insert_note_comment (
   m_note_id INTEGER,
@@ -67,16 +67,39 @@ AS $proc$
   INSERT INTO logs (message) VALUES (m_note_id || ' - Inserting comment - '
     || m_event || '.');
 
-  -- Insert a new username, or update the username to an existing userid.
+  -- Insert a new username, or update the username to an existing user_id.
+  -- If username is already bound to a different user_id, skip and log warning.
   IF (m_id_user IS NOT NULL AND m_username IS NOT NULL) THEN
-   INSERT INTO users (
-    user_id,
-    username
-   ) VALUES (
-    m_id_user,
-    m_username
-   ) ON CONFLICT (user_id) DO UPDATE
-    SET username = EXCLUDED.username;
+   IF EXISTS (
+    SELECT 1
+    FROM users u
+    WHERE u.username = m_username
+      AND u.user_id <> m_id_user
+   ) THEN
+    INSERT INTO logs (message) VALUES (
+      'WARNING: Username conflict skipped in users upsert. username='
+      || quote_literal(m_username)
+      || ', incoming_user_id='
+      || m_id_user
+      || ', existing_user_id='
+      || (SELECT u.user_id FROM users u WHERE u.username = m_username LIMIT 1)
+    );
+   ELSE
+    INSERT INTO users (
+     user_id,
+     username
+    ) VALUES (
+     m_id_user,
+     m_username
+    ) ON CONFLICT (user_id) DO UPDATE
+     SET username = EXCLUDED.username
+    WHERE NOT EXISTS (
+     SELECT 1
+     FROM users u2
+     WHERE u2.username = EXCLUDED.username
+       AND u2.user_id <> users.user_id
+    );
+   END IF;
   END IF;
 
   -- Insert comment with exception handling for unique constraint violations

@@ -18,8 +18,8 @@
 #   - systemd: See examples/systemd/osm-notes-ingestion-daemon.service (recommended)
 #
 # Author: Andres Gomez (AngocA)
-# Version: 2026-03-26
-VERSION="2026-03-26"
+# Version: 2026-03-25
+VERSION="2026-03-25"
 # 2026-03-15: After Planet --base exit 0, verify countries table exists before reporting success.
 
 # IMPORTANT: This daemon sources processAPINotes.sh to reuse all its functions
@@ -1242,9 +1242,26 @@ function __process_api_data {
    __log_finish
    return 1
   else
-   __processXMLorPlanet
-   __insertNewNotesAndComments
-   __loadApiTextComments
+   # shellcheck disable=SC2310
+   if ! __processXMLorPlanet; then
+    __loge "Failed to process XML for page ${PAGE_INDEX}; stopping cycle"
+    __log_finish
+    return 1
+   fi
+
+   # shellcheck disable=SC2310
+   if ! __insertNewNotesAndComments; then
+    __loge "Failed to insert notes/comments for page ${PAGE_INDEX}; stopping cycle"
+    __log_finish
+    return 1
+   fi
+
+   # shellcheck disable=SC2310
+   if ! __loadApiTextComments; then
+    __loge "Failed to load text comments for page ${PAGE_INDEX}; stopping cycle"
+    __log_finish
+    return 1
+   fi
   fi
 
   local NEXT_CURSOR

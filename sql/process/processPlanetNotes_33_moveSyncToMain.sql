@@ -1,7 +1,7 @@
 -- Moves data from sync tables to main tables after consolidation.
 --
 -- Author: Andres Gomez (AngocA)
--- Version: 2025-11-09
+-- Version: 2026-03-25
 
 -- Move notes from sync to main tables
 SELECT /* Notes-processPlanet */ clock_timestamp() AS Processing,
@@ -37,9 +37,36 @@ WHERE id_user IS NOT NULL
     FROM users AS u
     WHERE u.user_id = nc.id_user
   )
+  AND NOT EXISTS (
+    SELECT 1
+    FROM users AS u
+    WHERE u.username = nc.username
+      AND u.user_id <> nc.id_user
+  )
 GROUP BY id_user
 ON CONFLICT (user_id) DO UPDATE SET
- username = EXCLUDED.username;
+ username = EXCLUDED.username
+WHERE NOT EXISTS (
+  SELECT 1
+  FROM users u2
+  WHERE u2.username = EXCLUDED.username
+    AND u2.user_id <> users.user_id
+);
+
+-- Log skipped username conflicts to preserve observability.
+INSERT INTO logs (message)
+SELECT DISTINCT
+  'WARNING: Username conflict skipped in users upsert. username='
+  || quote_literal(nc.username)
+  || ', incoming_user_id='
+  || nc.id_user
+  || ', existing_user_id='
+  || u.user_id
+FROM note_comments_sync nc
+INNER JOIN users u ON u.username = nc.username
+WHERE nc.id_user IS NOT NULL
+  AND nc.username IS NOT NULL
+  AND u.user_id <> nc.id_user;
 
 -- Move comments from sync to main tables
 SELECT /* Notes-processPlanet */ clock_timestamp() AS Processing,

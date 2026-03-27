@@ -4,7 +4,7 @@
 -- for later analysis.
 --
 -- Author: Andres Gomez (AngocA)
--- Version: 2026-01-08
+-- Version: 2026-03-25
 -- Optimized: Changed NOT IN to LEFT JOIN for better performance with large datasets
 
 -- First, save missing comments to history table BEFORE insertion
@@ -50,9 +50,36 @@ FROM note_comments_check
 WHERE id_user IS NOT NULL
   AND username IS NOT NULL
   AND id_user NOT IN (SELECT /* Notes-check */ user_id FROM users)
+  AND NOT EXISTS (
+    SELECT 1
+    FROM users u
+    WHERE u.username = note_comments_check.username
+      AND u.user_id <> note_comments_check.id_user
+  )
 GROUP BY id_user
 ON CONFLICT (user_id) DO UPDATE SET
-  username = EXCLUDED.username;
+  username = EXCLUDED.username
+WHERE NOT EXISTS (
+  SELECT 1
+  FROM users u2
+  WHERE u2.username = EXCLUDED.username
+    AND u2.user_id <> users.user_id
+);
+
+-- Log skipped username conflicts to preserve observability.
+INSERT INTO logs (message)
+SELECT DISTINCT
+  'WARNING: Username conflict skipped in users upsert. username='
+  || quote_literal(ncc.username)
+  || ', incoming_user_id='
+  || ncc.id_user
+  || ', existing_user_id='
+  || u.user_id
+FROM note_comments_check ncc
+INNER JOIN users u ON u.username = ncc.username
+WHERE ncc.id_user IS NOT NULL
+  AND ncc.username IS NOT NULL
+  AND u.user_id <> ncc.id_user;
 
 -- Insert missing comments from check to main tables
 SELECT /* Notes-check */ clock_timestamp() AS Processing,

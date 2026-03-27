@@ -1,6 +1,6 @@
 -- Insert new notes and comments from API.
 -- Author: Andres Gomez (AngocA)
--- Version: 2025-12-23
+-- Version: 2026-03-25
 
 -- Configure session for high-priority INSERT operations
 SET statement_timeout = '5min';
@@ -361,12 +361,41 @@ $$
   
   -- Stage: Bulk INSERT users
   m_stage_start := clock_timestamp();
+  -- Prevent conflicts when username is reused with a different user_id.
+  -- We only insert/update pairs that do not collide with an existing username.
   INSERT INTO users (user_id, username)
   SELECT DISTINCT id_user, username
   FROM note_comments_api
   WHERE id_user IS NOT NULL AND username IS NOT NULL
+    AND NOT EXISTS (
+      SELECT 1
+      FROM users u
+      WHERE u.username = note_comments_api.username
+        AND u.user_id <> note_comments_api.id_user
+    )
   ON CONFLICT (user_id) DO UPDATE SET
-    username = EXCLUDED.username;
+    username = EXCLUDED.username
+  WHERE NOT EXISTS (
+    SELECT 1
+    FROM users u2
+    WHERE u2.username = EXCLUDED.username
+      AND u2.user_id <> users.user_id
+  );
+
+  -- Log skipped username conflicts to preserve observability.
+  INSERT INTO logs (message)
+  SELECT DISTINCT
+    'WARNING: Username conflict skipped in users upsert. username='
+    || quote_literal(nca.username)
+    || ', incoming_user_id='
+    || nca.id_user
+    || ', existing_user_id='
+    || u.user_id
+  FROM note_comments_api nca
+  INNER JOIN users u ON u.username = nca.username
+  WHERE nca.id_user IS NOT NULL
+    AND nca.username IS NOT NULL
+    AND u.user_id <> nca.id_user;
   m_stage_end := clock_timestamp();
   m_stage_duration := EXTRACT(EPOCH FROM (m_stage_end - m_stage_start)) * 1000;
   INSERT INTO logs (message) VALUES ('[TIMING] Stage: Bulk INSERT users - Duration: ' || 
