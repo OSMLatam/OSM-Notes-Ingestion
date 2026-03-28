@@ -4,7 +4,7 @@ bats_require_minimum_version 1.5.0
 
 # Coverage test to ensure all DB entrypoints validate schema compatibility.
 # Author: Andres Gomez (AngocA)
-# Version: 2026-03-27
+# Version: 2026-03-28
 
 load "$(dirname "$BATS_TEST_FILENAME")/../../test_helper.bash"
 
@@ -40,6 +40,11 @@ load "$(dirname "$BATS_TEST_FILENAME")/../../test_helper.bash"
 
   # DB entrypoint heuristic: script references psql or PGAPPNAME.
   if grep -Eq 'psql|PGAPPNAME' "${SCRIPT}"; then
+   # Schema compatibility diagnostic: reads schema_version and contracts; it is
+   # not a mutating entrypoint and must not require __assert_schema_compatible.
+   if [[ "$(basename "${SCRIPT}")" == "checkSchemaCompatibility.sh" ]]; then
+    continue
+   fi
    if ! grep -q '__assert_schema_compatible' "${SCRIPT}"; then
     MISSING_GUARD+=("${SCRIPT#${ROOT}/}")
    fi
