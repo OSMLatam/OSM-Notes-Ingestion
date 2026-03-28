@@ -37,6 +37,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - **2026-03-27 User upsert**: Refactored upsert logic for username collisions,
   conflict recording, and clearer logging in processing scripts.
 - **2026-03-27 Dependencies**: `lib/osm-common` submodule reference updated.
+- **2026-03-28 Schema compatibility scripts**: File version headers set to
+  `2026-03-28` for `etc/schema_compatibility.sh`,
+  `tests/ci/validate_schema_contracts.sh`, and
+  `bin/monitor/checkSchemaCompatibility.sh`.
 
 ### Fixed
 
