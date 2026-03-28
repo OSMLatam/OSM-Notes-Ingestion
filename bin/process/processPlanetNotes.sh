@@ -44,8 +44,8 @@
 # For contributing: shellcheck -x -o all processPlanetNotes.sh && shfmt -w -i 1 -sr -bn processPlanetNotes.sh
 #
 # Author: Andres Gomez (AngocA)
-# Version: 2026-03-27
-VERSION="2026-03-27"
+# Version: 2026-03-28
+VERSION="2026-03-28"
 
 #set -xv
 # Fails when a variable is not initialized.
@@ -285,7 +285,12 @@ function __checkPrereqs {
  set -e
  # Checks prereqs.
  __checkPrereqsCommands
- __assert_schema_compatible
+ # Fresh --base creates schema_version; skip guard until DDL has run.
+ if [[ "${PROCESS_TYPE}" != "--base" ]]; then
+  __assert_schema_compatible
+ else
+  __logd "Skipping schema compatibility check before --base bootstrap"
+ fi
 
  ## Validate SQL script files using centralized validation
  __logi "Validating SQL script files..."
@@ -3300,6 +3305,7 @@ function main() {
    __loge "ERROR: Failed to process geographic data in base mode"
    exit 1
   fi
+  __assert_schema_compatible
  elif [[ "${PROCESS_TYPE}" == "" ]]; then
   if ! __processGeographicDataSyncMode; then
    __loge "ERROR: Failed to process geographic data in sync mode"

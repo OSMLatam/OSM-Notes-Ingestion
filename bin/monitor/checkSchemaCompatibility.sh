@@ -44,7 +44,7 @@ Usage:
   $0 [OPTIONS]
 
 Options:
-  --consumer VALUE   Consumer to validate: ingestion, api, wms, monitoring, all.
+  --consumer VALUE   Consumer to validate: ingestion, api, wms, analytics, monitoring, all.
                      Default: all
   --db VALUE         Database name. Default: notes
   --verbose          Enable debug logs
@@ -159,7 +159,7 @@ function main() {
 
  local EXIT_CODE=0
  local CONSUMER
- local -a CONSUMERS=("ingestion" "api" "wms" "monitoring")
+ local -a CONSUMERS=("ingestion" "api" "wms" "analytics" "monitoring")
  for CONSUMER in "${CONSUMERS[@]}"; do
   if [[ "${CONSUMER_FILTER}" != "all" ]] && [[ "${CONSUMER}" != "${CONSUMER_FILTER}" ]]; then
    continue

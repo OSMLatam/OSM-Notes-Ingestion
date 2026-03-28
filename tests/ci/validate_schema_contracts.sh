@@ -54,7 +54,7 @@ function main() {
 
  local EXIT_CODE=0
  local CONSUMER
- for CONSUMER in ingestion api wms monitoring; do
+ for CONSUMER in ingestion api wms analytics monitoring; do
   local VALIDATION_EXIT_CODE=0
   # shellcheck disable=SC2310
   __validate_schema_contract_target "${CONSUMER}" "${TARGET_VERSION}" \

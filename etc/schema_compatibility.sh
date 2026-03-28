@@ -7,7 +7,7 @@
 
 # Sets schema compatibility variables for a consumer.
 # Parameters:
-#  $1: consumer id (ingestion, api, wms, monitoring)
+#  $1: consumer id (ingestion, api, wms, analytics, monitoring)
 function __set_schema_contract_range() {
  local CONSUMER="${1:-${SCHEMA_CONSUMER:-ingestion}}"
 
@@ -23,6 +23,11 @@ function __set_schema_contract_range() {
   export EXPECTED_SCHEMA_MAX="${EXPECTED_SCHEMA_MAX:-1.1.x}"
   ;;
  wms)
+  export SCHEMA_COMPONENT="${SCHEMA_COMPONENT:-core}"
+  export EXPECTED_SCHEMA_MIN="${EXPECTED_SCHEMA_MIN:-1.1.0}"
+  export EXPECTED_SCHEMA_MAX="${EXPECTED_SCHEMA_MAX:-1.1.x}"
+  ;;
+ analytics)
   export SCHEMA_COMPONENT="${SCHEMA_COMPONENT:-core}"
   export EXPECTED_SCHEMA_MIN="${EXPECTED_SCHEMA_MIN:-1.1.0}"
   export EXPECTED_SCHEMA_MAX="${EXPECTED_SCHEMA_MAX:-1.1.x}"

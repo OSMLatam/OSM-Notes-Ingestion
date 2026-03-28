@@ -39,8 +39,8 @@
 # For contributing: shellcheck -x -o all processAPINotes.sh && shfmt -w -i 1 -sr -bn processAPINotes.sh
 #
 # Author: Andres Gomez (AngocA)
-# Version: 2026-03-27
-VERSION="2026-03-27"
+# Version: 2026-03-28
+VERSION="2026-03-28"
 
 #set -xv
 # Fails when a variable is not initialized.
@@ -385,7 +385,6 @@ function __checkPrereqs {
  __logd "Checking required commands..."
  __checkPrereqsCommands
  __logd "Required commands check passed"
- __assert_schema_compatible
 
  ##
  # Detects and recovers from data gaps in recent notes
@@ -2933,9 +2932,11 @@ function main() {
 
  if [[ "${RET_FUNC}" -eq 1 ]]; then
   __createBaseStructure
+  __assert_schema_compatible
  fi
 
  if [[ "${RET_FUNC}" -eq 0 ]]; then
+  __assert_schema_compatible
   __validateHistoricalDataAndRecover
  fi
 

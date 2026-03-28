@@ -18,8 +18,8 @@
 #   - systemd: See examples/systemd/osm-notes-ingestion-daemon.service (recommended)
 #
 # Author: Andres Gomez (AngocA)
-# Version: 2026-03-27
-VERSION="2026-03-27"
+# Version: 2026-03-28
+VERSION="2026-03-28"
 # 2026-03-15: After Planet --base exit 0, verify countries table exists before reporting success.
 
 # IMPORTANT: This daemon sources processAPINotes.sh to reuse all its functions
@@ -295,7 +295,6 @@ if ! declare -f __checkPrereqs > /dev/null 2>&1; then
   # Checks prereqs.
   __checkPrereqsCommands
   __checkPrereqs_functions
-  __assert_schema_compatible
   __log_finish
  }
 fi
@@ -634,6 +633,7 @@ function __daemon_init {
  fi
 
  if [[ "${RET_FUNC}" -eq 0 ]]; then
+  __assert_schema_compatible
   __validateHistoricalDataAndRecover
  fi
 
@@ -1068,6 +1068,8 @@ function __process_api_data {
    fi
 
    __logi "Planet base load completed successfully"
+   # Runtime schema guard (skipped in __daemon_init when RET_FUNC=1 fresh DB)
+   __assert_schema_compatible
    # Ensure max_note_timestamp table exists after Planet load
    # This is critical because the table may not have been created during daemon_init
    # if base tables didn't exist at that time
