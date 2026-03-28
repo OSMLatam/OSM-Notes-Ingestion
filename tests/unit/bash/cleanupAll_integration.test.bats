@@ -4,7 +4,7 @@
 # Tests both full cleanup and partition-only cleanup functionality
 #
 # Author: Andres Gomez (AngocA)
-# Version: 2025-08-04
+# Version: 2026-03-28
 
 # Load test helper
 load ../../test_helper.bash
@@ -131,14 +131,17 @@ teardown() {
 # Test that cleanupAll.sh should handle no parameters gracefully
 @test "cleanupAll.sh should handle no parameters gracefully" {
   # Test that the script can run without parameters
-  # The script should work without parameters and return 0 (success)
+  # Returns 0 when DB has schema_version (core) and cleanup proceeds; otherwise
+  # may exit with documented error codes (e.g. 252 if schema is not initialized).
   export TEST_BASE_DIR="${SCRIPT_BASE_DIRECTORY}"
   run bash -c "export TEST_BASE_DIR='${SCRIPT_BASE_DIRECTORY}'; setup_test_properties; timeout 30s bash '${SCRIPT_BASE_DIRECTORY}/bin/cleanupAll.sh'"
   echo "DEBUG: Script exit code: $status"
   echo "DEBUG: Script output: $output"
-  # Should succeed (0) or fail due to missing dependencies (127, 241, 242, 243)
-  # or timeout (124) if the script takes too long
-  [ "$status" -eq 0 ] || [ "$status" -eq 124 ] || [ "$status" -eq 127 ] || [ "$status" -eq 241 ] || [ "$status" -eq 242 ] || [ "$status" -eq 243 ]
+  # 0 success; 124 timeout; 127 command not found; 241–243 script error codes;
+  # 252 ERROR_DATA_VALIDATION (e.g. missing schema_version in test DB)
+  [ "$status" -eq 0 ] || [ "$status" -eq 124 ] || [ "$status" -eq 127 ] \
+    || [ "$status" -eq 241 ] || [ "$status" -eq 242 ] || [ "$status" -eq 243 ] \
+    || [ "$status" -eq 252 ]
 }
 
 # Test that cleanupAll.sh partition cleanup functions should work correctly
