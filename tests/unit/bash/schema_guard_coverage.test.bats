@@ -42,7 +42,7 @@ load "$(dirname "$BATS_TEST_FILENAME")/../../test_helper.bash"
   if grep -Eq 'psql|PGAPPNAME' "${SCRIPT}"; then
    # Schema compatibility diagnostic: reads schema_version and contracts; it is
    # not a mutating entrypoint and must not require __assert_schema_compatible.
-   if [[ "$(basename "${SCRIPT}")" == "checkSchemaCompatibility.sh" ]]; then
+   if [[ "${SCRIPT}" == *"/checkSchemaCompatibility.sh" ]]; then
     continue
    fi
    if ! grep -q '__assert_schema_compatible' "${SCRIPT}"; then

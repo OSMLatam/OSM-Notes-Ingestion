@@ -3,7 +3,7 @@
 # Export Countries Backup Script Tests
 # Tests for bin/scripts/exportCountriesBackup.sh
 # Author: Andres Gomez (AngocA)
-# Version: 2026-01-02
+# Version: 2026-03-28
 
 load "${BATS_TEST_DIRNAME}/../../test_helper"
 
@@ -44,6 +44,11 @@ teardown() {
 @test "exportCountriesBackup.sh should check database connection" {
  # Mock psql to simulate connection failure
  psql() {
+  # __assert_schema_compatible queries schema_version before other logic.
+  if [[ "$*" == *schema_version* ]]; then
+   echo "1.1.0"
+   return 0
+  fi
   # Check if this is the connection test query
   if [[ "$*" == *"-d"* ]] && [[ "$*" == *"test_db"* ]] && [[ "$*" == *"-c"* ]] && [[ "$*" == *"SELECT 1;"* ]]; then
    return 1
@@ -60,6 +65,10 @@ teardown() {
 @test "exportCountriesBackup.sh should check if countries table exists" {
  # Mock psql to return 0 countries
  psql() {
+  if [[ "$*" == *schema_version* ]]; then
+   echo "1.1.0"
+   return 0
+  fi
   # Connection check should succeed
   if [[ "$*" == *"-d"* ]] && [[ "$*" == *"test_db"* ]] && [[ "$*" == *"-c"* ]] && [[ "$*" == *"SELECT 1;"* ]]; then
    return 0
@@ -81,6 +90,10 @@ teardown() {
 @test "exportCountriesBackup.sh should export countries to GeoJSON" {
  # Mock psql to return valid count
  psql() {
+  if [[ "$*" == *schema_version* ]]; then
+   echo "1.1.0"
+   return 0
+  fi
   # Connection check
   if [[ "$1" == "-d" ]] && [[ "$2" == "test_db" ]] && [[ "$3" == "-c" ]] && [[ "$4" == "SELECT 1;" ]]; then
    return 0
@@ -164,6 +177,10 @@ EOF
 @test "exportCountriesBackup.sh should filter out maritime boundaries" {
  # Mock psql to return counts
  psql() {
+  if [[ "$*" == *schema_version* ]]; then
+   echo "1.1.0"
+   return 0
+  fi
   # Connection check
   if [[ "$1" == "-d" ]] && [[ "$2" == "test_db" ]] && [[ "$3" == "-c" ]] && [[ "$4" == "SELECT 1;" ]]; then
    return 0
@@ -226,6 +243,10 @@ EOF
 
  # Mock psql
  psql() {
+  if [[ "$*" == *schema_version* ]]; then
+   echo "1.1.0"
+   return 0
+  fi
   # Connection check
   if [[ "$1" == "-d" ]] && [[ "$2" == "notes" ]] && [[ "$3" == "-c" ]] && [[ "$4" == "SELECT 1;" ]]; then
    return 0

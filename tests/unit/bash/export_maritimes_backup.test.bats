@@ -3,7 +3,7 @@
 # Export Maritimes Backup Script Tests
 # Tests for bin/scripts/exportMaritimesBackup.sh
 # Author: Andres Gomez (AngocA)
-# Version: 2026-01-02
+# Version: 2026-03-28
 
 load "${BATS_TEST_DIRNAME}/../../test_helper"
 
@@ -44,6 +44,10 @@ teardown() {
 @test "exportMaritimesBackup.sh should check database connection" {
  # Mock psql to simulate connection failure
  psql() {
+  if [[ "$*" == *schema_version* ]]; then
+   echo "1.1.0"
+   return 0
+  fi
   if [[ "$1" == "-d" ]] && [[ "$2" == "test_db" ]] && [[ "$3" == "-c" ]]; then
    return 1
   fi
@@ -59,6 +63,10 @@ teardown() {
 @test "exportMaritimesBackup.sh should check if countries table exists" {
  # Mock psql to return 0 countries
  psql() {
+  if [[ "$*" == *schema_version* ]]; then
+   echo "1.1.0"
+   return 0
+  fi
   if [[ "$*" == *"SELECT COUNT(*) FROM countries"* ]]; then
    echo "0"
    return 0
@@ -75,6 +83,10 @@ teardown() {
 @test "exportMaritimesBackup.sh should export maritimes to GeoJSON" {
  # Mock psql to return valid counts
  psql() {
+  if [[ "$*" == *schema_version* ]]; then
+   echo "1.1.0"
+   return 0
+  fi
   # Connection check
   if [[ "$1" == "-d" ]] && [[ "$2" == "test_db" ]] && [[ "$3" == "-c" ]] && [[ "$4" == "SELECT 1;" ]]; then
    return 0
@@ -158,6 +170,10 @@ EOF
 @test "exportMaritimesBackup.sh should identify maritime boundaries by patterns" {
  # Mock psql to return maritime count
  psql() {
+  if [[ "$*" == *schema_version* ]]; then
+   echo "1.1.0"
+   return 0
+  fi
   # Connection check
   if [[ "$1" == "-d" ]] && [[ "$2" == "test_db" ]] && [[ "$3" == "-c" ]] && [[ "$4" == "SELECT 1;" ]]; then
    return 0
@@ -217,6 +233,10 @@ EOF
 @test "exportMaritimesBackup.sh should fail if no maritimes found" {
  # Mock psql to return 0 maritimes
  psql() {
+  if [[ "$*" == *schema_version* ]]; then
+   echo "1.1.0"
+   return 0
+  fi
   # Connection check
   if [[ "$1" == "-d" ]] && [[ "$2" == "test_db" ]] && [[ "$3" == "-c" ]] && [[ "$4" == "SELECT 1;" ]]; then
    return 0

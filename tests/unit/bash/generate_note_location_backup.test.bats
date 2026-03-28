@@ -3,7 +3,7 @@
 # Generate Note Location Backup Script Tests
 # Tests for bin/scripts/generateNoteLocationBackup.sh
 # Author: Andres Gomez (AngocA)
-# Version: 2025-12-07
+# Version: 2026-03-28
 
 load "${BATS_TEST_DIRNAME}/../../test_helper"
 
@@ -45,6 +45,10 @@ teardown() {
 @test "generateNoteLocationBackup.sh should check database connection" {
  # Mock psql to simulate connection failure
  psql() {
+  if [[ "$*" == *schema_version* ]]; then
+   echo "1.1.0"
+   return 0
+  fi
   if [[ "$1" == "-d" ]] && [[ "$2" == "test_db" ]] && [[ "$3" == "-c" ]]; then
    return 1
   fi
@@ -60,6 +64,10 @@ teardown() {
 @test "generateNoteLocationBackup.sh should check if notes have country assignment" {
  # Mock psql to return 0 notes with country
  psql() {
+  if [[ "$*" == *schema_version* ]]; then
+   echo "1.1.0"
+   return 0
+  fi
   if [[ "$*" == *"SELECT COUNT(*) FROM notes WHERE id_country IS NOT NULL"* ]]; then
    echo "0"
    return 0
@@ -76,6 +84,10 @@ teardown() {
 @test "generateNoteLocationBackup.sh should export notes to CSV" {
  # Mock psql to return valid counts and export data
  psql() {
+  if [[ "$*" == *schema_version* ]]; then
+   echo "1.1.0"
+   return 0
+  fi
   if [[ "$*" == *"SELECT COUNT(*) FROM notes WHERE id_country IS NOT NULL"* ]]; then
    echo "100"
    return 0
@@ -113,6 +125,10 @@ teardown() {
 @test "generateNoteLocationBackup.sh should compress CSV to ZIP" {
  # Mock psql
  psql() {
+  if [[ "$*" == *schema_version* ]]; then
+   echo "1.1.0"
+   return 0
+  fi
   if [[ "$*" == *"SELECT COUNT(*) FROM notes WHERE id_country IS NOT NULL"* ]]; then
    echo "50"
    return 0
@@ -148,6 +164,10 @@ teardown() {
 @test "generateNoteLocationBackup.sh should remove uncompressed CSV after compression" {
  # Mock psql
  psql() {
+  if [[ "$*" == *schema_version* ]]; then
+   echo "1.1.0"
+   return 0
+  fi
   if [[ "$*" == *"SELECT COUNT(*) FROM notes WHERE id_country IS NOT NULL"* ]]; then
    echo "25"
    return 0
@@ -184,6 +204,10 @@ teardown() {
 @test "generateNoteLocationBackup.sh should handle max note_id query" {
  # Mock psql to return max note_id
  psql() {
+  if [[ "$*" == *schema_version* ]]; then
+   echo "1.1.0"
+   return 0
+  fi
   if [[ "$*" == *"SELECT COUNT(*) FROM notes WHERE id_country IS NOT NULL"* ]]; then
    echo "100"
    return 0
