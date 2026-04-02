@@ -17,7 +17,19 @@
 # - NOT for API notes processing (handled by daemon)
 #
 # Author: Andres Gomez (AngocA)
-# Version: 2025-12-28
+# Version: 2026-04-02
+
+# =============================================================================
+# INSTALL PATH (adjust to match your deployment)
+# =============================================================================
+#
+# Production installs usually follow FHS under /opt (see docs/Installation_Dependencies.md):
+#   /opt/osm-notes-ingestion
+#
+# Development or a dedicated user account may use:
+#   /home/notes/OSM-Notes-Ingestion
+#
+# Replace INGESTION_ROOT below in every cron line if your path differs.
 
 # =============================================================================
 # PRODUCTION CRON CONFIGURATION
@@ -37,7 +49,7 @@
 # Updates country and maritime boundaries from Overpass API
 # NOTE: Do NOT use --base flag here. The --base flag is only used automatically
 # during initial setup by processPlanetNotes.sh --base.
-0 2 1 * * /home/notes/OSM-Notes-Ingestion/bin/process/updateCountries.sh
+0 2 1 * * /opt/osm-notes-ingestion/bin/process/updateCountries.sh
 
 # =============================================================================
 # MONITORING TASKS
@@ -51,19 +63,19 @@
 # - Mark notes as hidden that exist in system but not in Planet
 # Note: It's normal for this script to do nothing if tables are already correct.
 # Only sends email if differences are found.
-0 6 * * * EMAILS="notes@osm.lat" /home/notes/OSM-Notes-Ingestion/bin/monitor/notesCheckVerifier.sh
+0 6 * * * EMAILS="notes@osm.lat" /opt/osm-notes-ingestion/bin/monitor/notesCheckVerifier.sh
 
 # Database performance analysis: Monthly (first day at 3 AM, after updateCountries)
 # Analyzes database performance and generates reports
 # ⚠️ WARNING: This script is resource-intensive and can take 30+ minutes to execute.
 # Monthly execution is recommended. Do NOT run daily or weekly.
-# NOTE: Create logs directory first: mkdir -p /home/notes/logs
-0 3 1 * * /home/notes/OSM-Notes-Ingestion/bin/monitor/analyzeDatabasePerformance.sh --db notes > /home/notes/logs/db_performance_monthly_$(date +\%Y\%m\%d).log 2>&1
+# NOTE: Create logs directory first: sudo mkdir -p /var/log/osm-notes-ingestion
+0 3 1 * * /opt/osm-notes-ingestion/bin/monitor/analyzeDatabasePerformance.sh --db notes > /var/log/osm-notes-ingestion/db_performance_monthly_$(date +\%Y\%m\%d).log 2>&1
 
 # Alternative: Weekly performance analysis (NOT RECOMMENDED - too resource-intensive)
 # ⚠️ This is commented out because weekly execution consumes too many resources.
 # Monthly execution is sufficient for performance monitoring.
-# 0 3 * * 0 /home/notes/OSM-Notes-Ingestion/bin/monitor/analyzeDatabasePerformance.sh --db notes > /home/notes/logs/db_performance_weekly_$(date +\%Y\%m\%d).log 2>&1
+# 0 3 * * 0 /opt/osm-notes-ingestion/bin/monitor/analyzeDatabasePerformance.sh --db notes > /var/log/osm-notes-ingestion/db_performance_weekly_$(date +\%Y\%m\%d).log 2>&1
 
 
 # =============================================================================
@@ -109,19 +121,23 @@
 
 # 3. Copy the maintenance and monitoring configuration from above
 
-# 4. Adjust the paths to match your installation:
-#    Replace /home/notes/OSM-Notes-Ingestion/ with your actual path
+# 4. Adjust paths if needed:
+#    Production default in this file: /opt/osm-notes-ingestion
+#    Logs for analyzeDatabasePerformance: /var/log/osm-notes-ingestion
+#    For a home-directory install, replace both with your tree (for example
+#    /home/notes/OSM-Notes-Ingestion and /home/notes/logs).
 
-# 5. Create logs directory (if using persistent logs):
-#    mkdir -p /home/notes/logs
+# 5. Create logs directory (if using persistent logs under /var/log):
+#    sudo mkdir -p /var/log/osm-notes-ingestion
+#    sudo chown notes:notes /var/log/osm-notes-ingestion   # if cron runs as user notes
 
 # 6. Test your configuration:
 #    # Test country update manually
-#    /home/notes/OSM-Notes-Ingestion/bin/process/updateCountries.sh
-#    
+#    /opt/osm-notes-ingestion/bin/process/updateCountries.sh
+#
 #    # Test verification manually
-#    /home/notes/OSM-Notes-Ingestion/bin/monitor/notesCheckVerifier.sh
-#    
+#    /opt/osm-notes-ingestion/bin/monitor/notesCheckVerifier.sh
+#
 #    # Check crontab syntax
 #    crontab -l
 
@@ -138,7 +154,7 @@
 # tail -f /tmp/notesCheckVerifier_*/notesCheckVerifier.log
 
 # Monitor database performance logs:
-# tail -f /home/notes/logs/db_performance_*.log
+# tail -f /var/log/osm-notes-ingestion/db_performance_*.log
 
 # Check if daemon is running:
 # systemctl status osm-notes-ingestion-daemon
