@@ -2,7 +2,7 @@
 title: "Installation and Dependencies Guide"
 description: "Complete guide to install dependencies and set up OSM-Notes-Ingestion for development"
 version: "1.0.0"
-last_updated: "2026-03-15"
+last_updated: "2026-04-02"
 author: "AngocA"
 tags:
   - "installation"
@@ -73,6 +73,10 @@ sudo apt-get install -y parallel
 # Download tool for parallel downloads
 sudo apt-get install -y aria2
 
+# Compression and archives: Planet notes (.bz2), note location backup and verifier
+# reports (.zip). Required by process scripts and notesCheckVerifier.
+sudo apt-get install -y bzip2 zip unzip
+
 # XML validation (optional, only if SKIP_XML_VALIDATION=false)
 sudo apt-get install -y libxml2-utils
 
@@ -114,6 +118,9 @@ bash --version  # Should be 4.0+
 parallel --version
 jq --version
 curl --version
+bzip2 --version
+zip -v | head -n 1
+unzip -v | head -n 1
 node --version  # Should be 20+
 npm --version
 gdalinfo --version
