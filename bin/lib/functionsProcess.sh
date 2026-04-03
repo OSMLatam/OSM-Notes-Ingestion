@@ -5,8 +5,8 @@
 # It loads all function modules for use across the project.
 #
 # Author: Andres Gomez (AngocA)
-# Version: 2026-03-26
-VERSION="2026-03-26"
+# Version: 2026-04-02
+VERSION="2026-04-02"
 # Note: __checkPrereqsCommands below overrides commonFunctions.sh after sourcing.
 # The common copy checks a minimal CLI set plus __validate_gnu_awk; this copy adds
 # DB, files, and network checks for ingestion scripts.
@@ -2277,6 +2277,19 @@ EOF
   __loge "ERROR: bzip2 is missing."
   # shellcheck disable=SC2154
   # ERROR_MISSING_LIBRARY is defined in lib/osm-common/commonFunctions.sh
+  exit "${ERROR_MISSING_LIBRARY}"
+ fi
+ ## ZIP tools (note location backup: unzip extract; optional scripts use zip)
+ __logd "Checking zip."
+ if ! command -v zip > /dev/null 2>&1; then
+  __loge "ERROR: zip is missing."
+  # shellcheck disable=SC2154
+  exit "${ERROR_MISSING_LIBRARY}"
+ fi
+ __logd "Checking unzip."
+ if ! command -v unzip > /dev/null 2>&1; then
+  __loge "ERROR: unzip is missing."
+  # shellcheck disable=SC2154
   exit "${ERROR_MISSING_LIBRARY}"
  fi
  ## GNU awk (gawk) — shared implementation in commonFunctions.sh

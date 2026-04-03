@@ -30,8 +30,8 @@
 # * shfmt -w -i 1 -sr -bn notesCheckVerifier.sh
 #
 # Author: Andres Gomez (AngocA)
-# Version: 2026-03-27
-VERSION="2026-03-27"
+# Version: 2026-04-02
+VERSION="2026-04-02"
 
 #set -xv
 # Fails when a variable is not initialized.
@@ -188,6 +188,10 @@ function __checkPrereqs {
  set +e
  # Checks prereqs.
  __checkPrereqsCommands
+ if ! command -v zip > /dev/null 2>&1; then
+  __loge "ERROR: zip is missing (required for the differences report archive)."
+  exit "${ERROR_MISSING_LIBRARY}"
+ fi
  __assert_schema_compatible
 
  ## Validate process file if provided

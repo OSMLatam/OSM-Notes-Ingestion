@@ -8,8 +8,8 @@
 # 255) General error
 #
 # Author: Andres Gomez (AngocA)
-# Version: 2026-03-27
-VERSION="2026-03-27"
+# Version: 2026-04-02
+VERSION="2026-04-02"
 
 # Base directory for the project.
 SCRIPT_BASE_DIRECTORY="$(cd "$(dirname "${BASH_SOURCE[0]}")/../.." \
@@ -51,6 +51,10 @@ main() {
 
  __log_start
  __logi "Generating note location backup..."
+ if ! command -v zip > /dev/null 2>&1; then
+  __loge "ERROR: zip is missing (required to compress noteLocation.csv)."
+  exit "${ERROR_MISSING_LIBRARY}"
+ fi
  __assert_schema_compatible
 
  # Check database connection
