@@ -14,7 +14,7 @@
 # 255) General error
 #
 # Author: Andres Gomez (AngocA)
-# Version: 2026-04-12
+# Version: 2026-04-13
 
 set -euo pipefail
 
@@ -53,17 +53,8 @@ else
  exit "${ERROR_MISSING_LIBRARY}"
 fi
 
-# Database connection variables
+# Database connection variables (validated in __main after parsing --help/--db)
 DBNAME="${DBNAME:-}"
-if [[ -z "${DBNAME}" ]]; then
- __loge "DBNAME not set. Please set it in etc/properties.sh or export it."
- # shellcheck disable=SC2154
- # ERROR_INVALID_ARGUMENT is defined in lib/osm-common/commonFunctions.sh
- exit "${ERROR_INVALID_ARGUMENT}"
-fi
-
-# Validate schema contract compatibility before running analysis.
-__assert_schema_compatible
 
 # Analysis directory
 ANALYSIS_DIR="${PROJECT_ROOT}/sql/analysis"
@@ -127,7 +118,7 @@ EXAMPLES:
   $0 --verbose
 
 AUTHOR: Andres Gomez (AngocA)
-VERSION: 2026-03-27
+VERSION: 2026-04-13
 EOF
 }
 
@@ -470,6 +461,15 @@ __main() {
    ;;
   esac
  done
+
+ if [[ -z "${DBNAME}" ]]; then
+  __loge "DBNAME not set. Use --db, export DBNAME, or set it in etc/properties.sh."
+  # shellcheck disable=SC2154
+  exit "${ERROR_INVALID_ARGUMENT}"
+ fi
+
+ # Validate schema contract compatibility before running analysis.
+ __assert_schema_compatible
 
  # Validate database connection
  __logi "Connecting to database: ${DBNAME}"

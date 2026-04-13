@@ -8,6 +8,7 @@ load ../../test_helper.bash
 
 # Integration tests for notesCheckVerifier.sh
 # Tests that actually execute the script to detect real errors
+# Version: 2026-04-13
 
 setup() {
  # Setup test environment
@@ -143,11 +144,14 @@ teardown() {
  # Test that available functions don't produce errors
  export TEST_BASE_DIR="${SCRIPT_BASE_DIRECTORY}"
  run bash -c "export TEST_BASE_DIR='${SCRIPT_BASE_DIRECTORY}'; setup_test_properties; source ${SCRIPT_BASE_DIRECTORY}/bin/monitor/notesCheckVerifier.sh && __checkPrereqs"
- [[ "${status}" -eq 0 ]] || [[ "${status}" -eq 239 ]] || [[ "${status}" -eq 241 ]]
+ # 252: schema contract / DB not initialized (acceptable without full test DB)
+ [[ "${status}" -eq 0 ]] || [[ "${status}" -eq 239 ]] \
+  || [[ "${status}" -eq 241 ]] || [[ "${status}" -eq 252 ]]
  [[ "${output}" != *"orden no encontrada"* ]]
  [[ "${output}" != *"command not found"* ]]
  # Accept any output as long as it doesn't contain command not found errors
- [[ -n "${output}" ]] || [[ "${status}" -eq 0 ]]
+ # Schema errors may log only to stderr depending on logger configuration
+ [[ -n "${output}" ]] || [[ "${status}" -eq 0 ]] || [[ "${status}" -eq 252 ]]
 }
 
 # Test that database operations work with test database

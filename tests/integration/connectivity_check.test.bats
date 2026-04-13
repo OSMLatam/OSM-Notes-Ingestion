@@ -51,7 +51,9 @@ teardown() {
  # DBNAME is set in setup() to osm_notes_ingestion_test
  run psql -d "${DBNAME}" -c "SELECT version();" 2>&1
 
- [ "$status" -eq 0 ]
+ if [[ "${status}" -ne 0 ]]; then
+  skip "PostgreSQL database ${DBNAME} not reachable (start server or create DB)"
+ fi
  [[ "${output}" == *"PostgreSQL"* ]]
 }
 

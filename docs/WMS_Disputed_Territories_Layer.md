@@ -4,6 +4,50 @@ This repository maintains a **standalone PostGIS table** for a WMS overlay of
 canonically named disputed / unclaimed areas. It is **not** used for note
 country assignment or ingestion logic.
 
+## What `disputed_tagged` means
+
+In OSM, many conflict areas are mapped with tags such as **`disputed=yes`**,
+**`disputed_by=*`**, or **`claimed_by=*`** on boundaries or polygons. The kind
+**`disputed_tagged`** in our table means: “we catalogue this place as a named
+dispute that is usually represented that way in OSM”, not “we already imported
+its geometry”.
+
+Today the refresh script **does not** query Overpass for those features, so
+**`geom` stays NULL** for `disputed_tagged` until we add an import step (or you
+assign geometry manually). That is different from:
+
+- **`country_maritime_intersection`**: geometry from **`ST_Intersection`** of two
+  rows in **`countries`** when you set **`pair_relation_ids`** in the JSON.
+- **`unclaimed_territory`**: optional **`bbox`** rectangle in the JSON (e.g. Bir
+  Tawil).
+
+So `disputed_tagged` is mainly a **reserved category** for WMS labels and future
+automation, aligned with OSM tagging practice.
+
+## Including areas from a personal list (e.g. `fronteras.txt`)
+
+A plain-text note file (like a list of border cases in Spanish) is **not**
+read by the pipeline. To add those areas you **copy them into the canonical
+JSON** (and keep **`sql/wms/disputed_territories_wms_02_seed_reference_names.sql`**
+in sync for the same `kind` + `name`):
+
+1. Add an object under **`entries`** in   **`data/disputed_territories_wms_names.json`** with **`kind`**, **`name`**,
+   **`description`**, **`reference_url`**.
+2. Choose **`kind`**:
+   - If the case is “two country polygons overlap in our DB” → often
+     **`country_maritime_intersection`** plus **`pair_relation_ids`** when you
+     know the two **`countries.country_id`** values.
+   - If it is mainly an OSM-tagged dispute polygon → **`disputed_tagged`** (no
+     auto geometry yet).
+   - If it is unclaimed land and you only have a rough rectangle →
+     **`unclaimed_territory`** plus **`bbox`**.
+3. Mirror the new rows in **`disputed_territories_wms_02_seed_reference_names.sql`**
+   (same names; use **`ON CONFLICT (kind, name) DO NOTHING`**).
+4. Run **`updateDisputedTerritoriesWMS.sh`** (after **`--init`** on first   deploy) so rows with hints get **`geom`**.
+
+Do **not** commit private paths like `file:///.../Descargas/fronteras.txt`; keep
+the repo’s source of truth as **`disputed_territories_wms_names.json`**.
+
 ## Components
 
 | Path | Role |
@@ -33,8 +77,7 @@ country assignment or ingestion logic.
 - **`bbox`**: `[min_lon, min_lat, max_lon, max_lat]` for `unclaimed_territory`
   (e.g. Bir Tawil rectangle).
 
-Rows with kind **`disputed_tagged`** stay without geometry until a future
-Overpass/import step fills them.
+See [What `disputed_tagged` means](#what-disputed_tagged-means) above.
 
 ## WMS publication
 
@@ -48,3 +91,7 @@ GeoServer / MapServer configuration lives in the sibling project
 OSM-Notes-WMS can build **materialized** disputed/unclaimed geometry from
 country overlap gaps. The ingestion table **`disputed_territories_wms`** is a
 **curated, named** layer (wiki-aligned labels); the two can coexist.
+
+---
+**Author:** Andres Gomez (AngocA)  
+**Version:** 2026-04-07

@@ -52,8 +52,8 @@
 # For contributing: shellcheck -x -o all updateCountries.sh && shfmt -w -i 1 -sr -bn updateCountries.sh
 #
 # Author: Andres Gomez (AngocA)
-# Version: 2026-04-11
-VERSION="2026-04-11"
+# Version: 2026-04-13
+VERSION="2026-04-13"
 
 #set -xv
 # Fails when a variable is not initialized.
@@ -716,7 +716,7 @@ function __checkBoundariesUpdateNeeded {
  if declare -f __append_curl_download_headers > /dev/null 2>&1; then
   __append_curl_download_headers IDS_OVERPASS_CURL
  fi
- IDS_OVERPASS_CURL+=(-o "${TMP_IDS_FILE}" --data-binary "@${OVERPASS_QUERY_FILE}" \
+ IDS_OVERPASS_CURL+=(-o "${TMP_IDS_FILE}" --data-binary "@${OVERPASS_QUERY_FILE}"
   "${OVERPASS_INTERPRETER}")
  set +e
  "${IDS_OVERPASS_CURL[@]}" 2> /dev/null
@@ -1452,7 +1452,7 @@ out;"
   if declare -f __append_curl_download_headers > /dev/null 2>&1; then
    __append_curl_download_headers EEZ_OVERPASS_CURL
   fi
-  EEZ_OVERPASS_CURL+=(-H "Content-Type: application/x-www-form-urlencoded" \
+  EEZ_OVERPASS_CURL+=(-H "Content-Type: application/x-www-form-urlencoded"
    -o "${TEMP_OVERLASS_RESPONSE}" -d "data=${OVERPASS_QUERY}" "${OVERPASS_API}")
   if "${EEZ_OVERPASS_CURL[@]}" 2> /dev/null; then
 

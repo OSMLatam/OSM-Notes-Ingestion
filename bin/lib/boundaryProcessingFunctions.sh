@@ -2,8 +2,8 @@
 
 # Boundary Processing Functions for OSM-Notes-profile
 # Author: Andres Gomez (AngocA)
-# Version: 2026-04-11
-VERSION="2026-04-11"
+# Version: 2026-04-13
+VERSION="2026-04-13"
 # 2026-03-20: New download flow — if all Overpass downloads fail but backup already
 #   filled countries/countries_new, continue (duplicate OSM relations / placeholders).
 
@@ -325,6 +325,8 @@ function __log_import_start() {
 # Context variables:
 #   Reads:
 #     - TMP_DIR: Temporary directory for decompressed files (required)
+#     - BOUNDARIES_RESOLVE_GEOJSON_LOCAL_ONLY: If true, skip GitHub download
+#       and return 1 when no local .geojson / .geojson.gz exists (tests/offline)
 #     - BOUNDARIES_DATA_REPO_URL: GitHub repository URL (default: OSM-Notes-Data)
 #     - BOUNDARIES_DATA_BRANCH: GitHub branch name (default: main)
 #     - DOWNLOAD_USER_AGENT: User agent for HTTP requests (optional)
@@ -408,6 +410,12 @@ function __resolve_geojson_file() {
     __loge "Failed to decompress ${BASE_PATH}.geojson.gz"
    fi
   fi
+ fi
+
+ # Local files not found; optional offline mode (unit tests, air-gapped use)
+ if [[ "${BOUNDARIES_RESOLVE_GEOJSON_LOCAL_ONLY:-}" == "true" ]]; then
+  __logd "BOUNDARIES_RESOLVE_GEOJSON_LOCAL_ONLY: no local file for ${BASE_PATH}"
+  return 1
  fi
 
  # Local files not found, try downloading from GitHub

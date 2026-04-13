@@ -3,7 +3,7 @@
 # Boundary Processing Utils Tests
 # Tests for utility functions (resolve, validate, compare)
 # Author: Andres Gomez (AngocA)
-# Version: 2025-12-08
+ # Version: 2026-04-13
 
 load "${BATS_TEST_DIRNAME}/../../test_helper"
 load "${BATS_TEST_DIRNAME}/../../test_helpers_common"
@@ -22,6 +22,9 @@ setup() {
  # Set log level to DEBUG to capture all log output
  export LOG_LEVEL="DEBUG"
  export __log_level="DEBUG"
+
+ # Skip GitHub fallback so missing local files fail deterministically (no network)
+ export BOUNDARIES_RESOLVE_GEOJSON_LOCAL_ONLY="true"
 
  # Load boundary processing functions
  source "${TEST_BASE_DIR}/bin/lib/boundaryProcessingFunctions.sh"
