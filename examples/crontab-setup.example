@@ -17,7 +17,7 @@
 # - NOT for API notes processing (handled by daemon)
 #
 # Author: Andres Gomez (AngocA)
-# Version: 2026-04-02
+# Version: 2026-04-06
 
 # =============================================================================
 # INSTALL PATH (adjust to match your deployment)
@@ -50,6 +50,12 @@
 # NOTE: Do NOT use --base flag here. The --base flag is only used automatically
 # during initial setup by processPlanetNotes.sh --base.
 0 2 1 * * /opt/osm-notes-ingestion/bin/process/updateCountries.sh
+
+# Disputed territories WMS layer: refresh geometries monthly (after country boundaries).
+# Uses data/disputed_territories_wms_names.json and the countries table (see sql/wms/).
+# First-time only: run manually once with --init to create and seed the table, then keep
+# this cron line without --init. Do NOT use --init in cron (would re-apply DDL each run).
+0 4 1 * * /opt/osm-notes-ingestion/bin/process/updateDisputedTerritoriesWMS.sh
 
 # =============================================================================
 # MONITORING TASKS
@@ -93,6 +99,10 @@
 #
 # - updateCountries.sh: Monthly maintenance task to update country boundaries.
 #   Do NOT use --base flag in cron - it would delete and recreate all data.
+#
+# - updateDisputedTerritoriesWMS.sh: Monthly refresh of the standalone WMS layer
+#   disputed_territories_wms (not used by note ingestion). Schedule after
+#   updateCountries.sh on the same day. Use --init only once manually for first deploy.
 #
 # - notesCheckVerifier.sh: Daily verification and correction script that:
 #   * Corrects problems identified with API calls (inserts missing notes/comments)
@@ -151,6 +161,7 @@
 
 # Monitor maintenance task logs:
 # tail -f /tmp/updateCountries_*/updateCountries.log
+# tail -f /tmp/updateDisputedTerritoriesWMS_*/updateDisputedTerritoriesWMS.log
 # tail -f /tmp/notesCheckVerifier_*/notesCheckVerifier.log
 
 # Monitor database performance logs:

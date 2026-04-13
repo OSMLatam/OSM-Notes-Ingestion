@@ -15,6 +15,10 @@ Contains the main data processing scripts:
 - **`processPlanetNotes.sh`**: Processes OSM notes from Planet files
 - **`processAPINotes.sh`**: Processes OSM notes from API endpoints
 - **`updateCountries.sh`**: Updates country data and associations
+- **`updateDisputedTerritoriesWMS.sh`**: Refreshes the standalone PostGIS layer
+  `disputed_territories_wms` for WMS (not used by ingestion). Schedule monthly in
+  cron after `updateCountries.sh`; see `examples/crontab-setup.example`. First deploy:
+  run once with `--init`, then use the cron entry without `--init`.
 
 ### `/bin/monitor/`
 
