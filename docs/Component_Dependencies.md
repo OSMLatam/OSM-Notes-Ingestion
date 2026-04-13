@@ -2,7 +2,7 @@
 title: "Component Dependencies"
 description: "Comprehensive diagrams and descriptions of component dependencies in the OSM-Notes-Ingestion system, crucial for development, debugging, and system maintenance"
 version: "1.0.0"
-last_updated: "2026-01-25"
+last_updated: "2026-04-06"
 author: "AngocA"
 tags:
   - "architecture"
@@ -707,6 +707,7 @@ insert_note_comment(...)
 | `processAPINotesDaemon.sh`       | Same as `processAPINotes.sh`                                                                                                                                               | Systemd service (REQUIRED for production)                        |
 | `processPlanetNotes.sh`          | `processPlanetFunctions.sh`, `noteProcessingFunctions.sh`, `boundaryProcessingFunctions.sh`, `parallelProcessingFunctions.sh`, `functionsProcess.sh`, all common libraries | `processAPINotes.sh` (when threshold exceeded), manual execution |
 | `updateCountries.sh`             | `boundaryProcessingFunctions.sh`, `processPlanetFunctions.sh`, `functionsProcess.sh`, `overpassFunctions.sh`, all common libraries                                         | Monthly cron jobs, manual execution                              |
+| `updateDisputedTerritoriesWMS.sh` | `commonFunctions.sh`, `pathConfigurationFunctions.sh`, `countries` table, `data/disputed_territories_wms_names.json`                                                      | Monthly cron after `updateCountries.sh`, WMS sibling project |
 | `functionsProcess.sh`            | `commonFunctions.sh`, `validationFunctions.sh`, `errorHandlingFunctions.sh`, `securityFunctions.sh`, `overpassFunctions.sh`                                                | All processing scripts, all `bin/lib/*.sh`                       |
 | `processAPIFunctions.sh`         | `functionsProcess.sh`                                                                                                                                                      | `processAPINotes.sh`                                             |
 | `processPlanetFunctions.sh`      | `functionsProcess.sh`                                                                                                                                                      | `processPlanetNotes.sh`, `updateCountries.sh`                    |
@@ -728,6 +729,7 @@ insert_note_comment(...)
 | `functionsProcess_20_createFunctionToGetCountry.sql` | `countries`, `maritimes`, `notes` tables, PostGIS                       | `get_country()` function                                                |
 | `functionsProcess_21_createProcedure_insertNote.sql` | `get_country()` function, `notes`, `properties` tables                  | `insert_note()` procedure                                               |
 | `functionsProcess_32_assignCountryToNotesChunk.sql`  | `get_country()` function, `notes` table                                 | Updates `notes.id_country`                                              |
+| `sql/wms/disputed_territories_wms_*.sql`              | PostgreSQL, PostGIS, optional `countries` for refresh | `disputed_territories_wms`, `disputed_territory_kind` (WMS only) |
 
 ---
 
