@@ -1,0 +1,120 @@
+{
+  "version": "2026-04-06",
+  "description": "Canonical names for disputed_territories_wms (WMS only; not used by ingestion).",
+  "geometry_hints": "pair_relation_ids [a,b] are OSM relation ids in countries.country_id; bbox is [min_lon,min_lat,max_lon,max_lat] for unclaimed_territory.",
+  "sources": [
+    "https://wiki.openstreetmap.org/wiki/Disputed_territories",
+    "https://en.wikipedia.org/wiki/List_of_territorial_disputes"
+  ],
+  "kinds": {
+    "country_maritime_intersection": "Overlap from intersecting country/maritime polygons.",
+    "disputed_tagged": "Areas with disputed / disputed_by / claimed_by tags in OSM.",
+    "unclaimed_territory": "Land not claimed by any sovereign in OSM sense (e.g. Bir Tawil)."
+  },
+  "entries": [
+    {
+      "kind": "country_maritime_intersection",
+      "name": "Ems-Dollard mouth",
+      "description": "Overlapping admin claims around Ems estuary (NL/DE).",
+      "reference_url": "https://wiki.openstreetmap.org/wiki/Disputed_territories",
+      "pair_relation_ids": [51477, 2323309]
+    },
+    {
+      "kind": "country_maritime_intersection",
+      "name": "Mont Blanc summit",
+      "description": "Competing FR/IT summit boundary representations.",
+      "reference_url": "https://wiki.openstreetmap.org/wiki/Disputed_territories"
+    },
+    {
+      "kind": "country_maritime_intersection",
+      "name": "Oyster Pond",
+      "description": "Saint-Martin / Sint Maarten overlapping claims.",
+      "reference_url": "https://wiki.openstreetmap.org/wiki/Disputed_territories"
+    },
+    {
+      "kind": "country_maritime_intersection",
+      "name": "Carlingford Lough and Lough Foyle",
+      "description": "IE/UK maritime boundary context.",
+      "reference_url": "https://wiki.openstreetmap.org/wiki/Disputed_territories"
+    },
+    {
+      "kind": "country_maritime_intersection",
+      "name": "Lake Constance",
+      "description": "DE/AT/CH boundary through lake.",
+      "reference_url": "https://wiki.openstreetmap.org/wiki/Disputed_territories"
+    },
+    {
+      "kind": "country_maritime_intersection",
+      "name": "Croatia-Serbia border (Danube sector)",
+      "description": "River-shift and island claims along Danube.",
+      "reference_url": "https://wiki.openstreetmap.org/wiki/Disputed_territories"
+    },
+    {
+      "kind": "country_maritime_intersection",
+      "name": "Island of Vukovar",
+      "description": "Competing HR/RS boundary representations.",
+      "reference_url": "https://wiki.openstreetmap.org/wiki/Disputed_territories"
+    },
+    {
+      "kind": "country_maritime_intersection",
+      "name": "Gulf of Piran",
+      "description": "SI/HR maritime delimitation disputes.",
+      "reference_url": "https://wiki.openstreetmap.org/wiki/Disputed_territories"
+    },
+    {
+      "kind": "country_maritime_intersection",
+      "name": "Machias Seal Island",
+      "description": "CA/US competing sovereignty.",
+      "reference_url": "https://wiki.openstreetmap.org/wiki/Disputed_territories"
+    },
+    {
+      "kind": "country_maritime_intersection",
+      "name": "Dixon Entrance",
+      "description": "CA/US competing maritime representations.",
+      "reference_url": "https://wiki.openstreetmap.org/wiki/Disputed_territories"
+    },
+    {
+      "kind": "disputed_tagged",
+      "name": "Western Sahara",
+      "description": "Sahrawi / Morocco competing claims.",
+      "reference_url": "https://wiki.openstreetmap.org/wiki/Disputed_territories"
+    },
+    {
+      "kind": "disputed_tagged",
+      "name": "Kashmir region",
+      "description": "IN/PK/CN context.",
+      "reference_url": "https://wiki.openstreetmap.org/wiki/Disputed_territories"
+    },
+    {
+      "kind": "disputed_tagged",
+      "name": "South Ossetia",
+      "description": "GE/RU context.",
+      "reference_url": "https://wiki.openstreetmap.org/wiki/Disputed_territories"
+    },
+    {
+      "kind": "disputed_tagged",
+      "name": "Abkhazia",
+      "description": "GE/RU context.",
+      "reference_url": "https://wiki.openstreetmap.org/wiki/Disputed_territories"
+    },
+    {
+      "kind": "disputed_tagged",
+      "name": "Olivenza region",
+      "description": "PT historical claim vs ES administration.",
+      "reference_url": "https://wiki.openstreetmap.org/wiki/Disputed_territories"
+    },
+    {
+      "kind": "disputed_tagged",
+      "name": "Mar de Grau (Peru maritime claim)",
+      "description": "Peru constitutional maritime claim context.",
+      "reference_url": "https://wiki.openstreetmap.org/wiki/Disputed_territories"
+    },
+    {
+      "kind": "unclaimed_territory",
+      "name": "Bir Tawil",
+      "description": "Land between EG/SD claims often mapped as claimed by neither.",
+      "reference_url": "https://wiki.openstreetmap.org/wiki/Disputed_territories",
+      "bbox": [33.68, 21.53, 34.05, 21.87]
+    }
+  ]
+}

@@ -2,7 +2,7 @@
 title: "OSM Notes Ingestion - System Documentation"
 description: "This document provides comprehensive technical documentation for the OSM-Notes-Ingestion system,"
 version: "1.0.0"
-last_updated: "2026-01-25"
+last_updated: "2026-04-06"
 author: "AngocA"
 tags:
   - "documentation"
@@ -167,6 +167,10 @@ The OSM-Notes-Ingestion system consists of the following components:
 
 For **WMS (Web Map Service) layer publication**, see the
 [OSM-Notes-WMS](https://github.com/OSM-Notes/OSM-Notes-WMS) repository.
+
+For the optional **curated disputed territories** PostGIS table maintained in
+this repo (`disputed_territories_wms`), see
+[WMS_Disputed_Territories_Layer.md](./WMS_Disputed_Territories_Layer.md).
 
 - **Style Management**: Different styles for open/closed notes
 - **Client Integration**: JOSM, Vespucci, and web applications

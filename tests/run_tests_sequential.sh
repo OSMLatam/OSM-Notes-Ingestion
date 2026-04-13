@@ -2,7 +2,7 @@
 
 # Sequential Test Runner for OSM-Notes-Ingestion
 # Author: Andres Gomez (AngocA)
-# Version: 2025-12-07
+# Version: 2026-04-06
 #
 # Ejecuta tests en secuencia organizada por niveles
 
@@ -172,6 +172,7 @@ __run_level_1() {
   "${SCRIPT_DIR}/unit/bash/function_naming_convention.test.bats" \
   "${SCRIPT_DIR}/unit/bash/variable_naming_convention.test.bats" \
   "${SCRIPT_DIR}/unit/bash/script_help_validation.test.bats" \
+  "${SCRIPT_DIR}/unit/bash/updateDisputedTerritoriesWMS.test.bats" \
   "${SCRIPT_DIR}/unit/bash/variable_duplication.test.bats" \
   "${SCRIPT_DIR}/unit/bash/variable_duplication_detection.test.bats" \
   "${SCRIPT_DIR}/unit/bash/function_consolidation.test.bats"; then

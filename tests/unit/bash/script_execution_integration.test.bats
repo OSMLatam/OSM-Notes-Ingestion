@@ -2,7 +2,7 @@
 
 # Script execution integration tests to detect runtime errors
 # Author: Andres Gomez (AngocA)
-# Version: 2026-01-03
+# Version: 2026-04-06
 
 # Load test helper to get setup_test_properties and restore_properties
 load "$(dirname "$BATS_TEST_FILENAME")/../../test_helper.bash"
@@ -135,6 +135,7 @@ teardown() {
   "bin/process/processPlanetNotes.sh"
   "bin/cleanupAll.sh"
   "bin/process/updateCountries.sh"
+  "bin/process/updateDisputedTerritoriesWMS.sh"
  )
 
  local failed_scripts=()

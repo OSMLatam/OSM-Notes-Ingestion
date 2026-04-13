@@ -3,7 +3,7 @@
 # Test Selection Based on Changed Files
 # Determines which tests to run based on git changes
 # Author: Andres Gomez (AngocA)
-# Version: 2025-12-23
+# Version: 2026-04-06
 
 set -euo pipefail
 
@@ -97,10 +97,15 @@ determine_test_selection() {
  if __has_changes "${CHANGED_FILES}" \
   "bin/lib/boundaryProcessingFunctions\.sh" \
   "bin/process/updateCountries\.sh" \
+  "bin/process/updateDisputedTerritoriesWMS\.sh" \
+  "bin/cleanupAll\.sh" \
   "tests/unit/bash/boundary.*\.bats" \
+  "tests/unit/bash/cleanupAll.*\.bats" \
+  "tests/unit/bash/updateDisputedTerritoriesWMS.*\.bats" \
   "tests/integration/boundaries.*\.bats" \
   "sql/.*boundary.*\.sql" \
-  "sql/.*country.*\.sql"; then
+  "sql/.*country.*\.sql" \
+  "sql/wms/.*\.sql"; then
   export RUN_BOUNDARY_TESTS=true
   echo "✓ Boundary tests selected"
  fi

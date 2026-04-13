@@ -8,7 +8,7 @@ bats_require_minimum_version 1.5.0
 # without errors, ensuring basic functionality and variable loading works correctly
 #
 # Author: Andres Gomez (AngocA)
-# Version: 2026-01-16
+# Version: 2026-04-06
 
 # Load test helper to get setup_test_properties
 load "${BATS_TEST_DIRNAME}/../../test_helper"
@@ -98,6 +98,12 @@ teardown() {
  [ "$status" -lt 128 ]
 }
 
+@test "updateDisputedTerritoriesWMS.sh should work with --help option" {
+ run bash "${SCRIPT_BASE_DIRECTORY}/bin/process/updateDisputedTerritoriesWMS.sh" --help 2>&1
+ [ "$status" -eq 1 ]
+ [[ "$output" == *"Usage:"* ]] || [[ "$output" == *"usage"* ]]
+}
+
 
 # Test that all scripts can be sourced without errors
 @test "all main scripts should be sourceable without errors" {
@@ -142,6 +148,7 @@ teardown() {
   "${SCRIPT_BASE_DIRECTORY}/bin/process/processPlanetNotes.sh"
   # cleanupPartitions.sh functionality now integrated into cleanupAll.sh
   "${SCRIPT_BASE_DIRECTORY}/bin/process/updateCountries.sh"
+  "${SCRIPT_BASE_DIRECTORY}/bin/process/updateDisputedTerritoriesWMS.sh"
  )
 
  for SCRIPT in "${SCRIPTS[@]}"; do
@@ -159,6 +166,7 @@ teardown() {
   "${SCRIPT_BASE_DIRECTORY}/bin/process/processPlanetNotes.sh"
   # cleanupPartitions.sh functionality now integrated into cleanupAll.sh
   "${SCRIPT_BASE_DIRECTORY}/bin/process/updateCountries.sh"
+  "${SCRIPT_BASE_DIRECTORY}/bin/process/updateDisputedTerritoriesWMS.sh"
  )
 
  for SCRIPT in "${SCRIPTS[@]}"; do

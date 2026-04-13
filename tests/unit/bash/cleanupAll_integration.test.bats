@@ -4,7 +4,7 @@
 # Tests both full cleanup and partition-only cleanup functionality
 #
 # Author: Andres Gomez (AngocA)
-# Version: 2026-03-28
+# Version: 2026-04-06
 
 # Load test helper
 load ../../test_helper.bash
@@ -114,7 +114,7 @@ teardown() {
     "${SCRIPT_BASE_DIRECTORY}/sql/process/processPlanetNotes_10_dropSyncTables.sql"
     "${SCRIPT_BASE_DIRECTORY}/sql/process/processPlanetNotes_12_dropBaseTables.sql"
     "${SCRIPT_BASE_DIRECTORY}/sql/consolidated_cleanup.sql"
-    "${SCRIPT_BASE_DIRECTORY}/sql/consolidated_cleanup.sql"
+    "${SCRIPT_BASE_DIRECTORY}/sql/wms/disputed_territories_wms_99_drop_all.sql"
   )
   
   for SQL_FILE in "${SQL_FILES[@]}"; do

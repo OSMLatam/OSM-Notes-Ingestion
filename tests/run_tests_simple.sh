@@ -2,7 +2,7 @@
 
 # Simple Test Runner for OSM-Notes-profile (No Docker Required)
 # Author: Andres Gomez (AngocA)
-# Version: 2025-11-11
+# Version: 2026-04-06
 
 set -uo pipefail
 
@@ -186,6 +186,7 @@ run_bats_tests() {
   "${SCRIPT_DIR}/unit/bash/cleanupAll.test.bats"
   "${SCRIPT_DIR}/unit/bash/variable_duplication.test.bats"
   "${SCRIPT_DIR}/unit/bash/script_help_validation.test.bats"
+  "${SCRIPT_DIR}/unit/bash/updateDisputedTerritoriesWMS.test.bats"
   "${SCRIPT_DIR}/unit/bash/variable_duplication_detection.test.bats"
   "${SCRIPT_DIR}/unit/bash/script_execution_integration.test.bats"
   "${SCRIPT_DIR}/unit/bash/sql_validation_integration.test.bats"

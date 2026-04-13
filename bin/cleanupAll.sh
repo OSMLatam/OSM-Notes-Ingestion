@@ -11,8 +11,8 @@
 # 255) General error
 #
 # Author: Andres Gomez (AngocA)
-# Version: 2026-03-27
-VERSION="2026-03-27"
+# Version: 2026-04-06
+VERSION="2026-04-06"
 
 set -euo pipefail
 # shellcheck disable=SC2310,SC2312
@@ -621,6 +621,25 @@ function __cleanup_base() {
   return 1
  fi
  __logi "SUCCESS: Country tables dropped"
+
+ if [[ ${EXIT_REQUESTED} -eq 1 ]]; then
+  __loge "Cleanup was interrupted"
+  __log_finish
+  return 1
+ fi
+ local DISPUTED_WMS_DROP="${SCRIPT_BASE_DIRECTORY}/sql/wms/disputed_territories_wms_99_drop_all.sql"
+ if [[ -f "${DISPUTED_WMS_DROP}" ]]; then
+  local DISPUTED_WMS_DROP_STATUS=0
+  __execute_sql_script "${TARGET_DB}" "${DISPUTED_WMS_DROP}" "WMS Disputed Territories"
+  DISPUTED_WMS_DROP_STATUS=$?
+  if [[ ${DISPUTED_WMS_DROP_STATUS} -ne 0 ]]; then
+   __loge "ERROR: Failed to drop disputed_territories_wms layer"
+   __log_finish
+   return 1
+  fi
+ else
+  __logw "WMS drop script not found: ${DISPUTED_WMS_DROP}"
+ fi
 
  __log_finish
 }
