@@ -3,7 +3,7 @@
 # Connectivity Check Tests
 # Verify external service availability before running integration tests
 # Author: Andres Gomez (AngocA)
-# Version: 2026-04-11
+# Version: 2026-04-13
 
 load "$(dirname "$BATS_TEST_FILENAME")/../test_helper.bash"
 # Note: service_availability_helpers.bash is automatically loaded by test_helper.bash
@@ -97,7 +97,7 @@ teardown() {
  # to avoid issues with timeout exit codes
  local TEMP_RESPONSE
  TEMP_RESPONSE=$(mktemp)
- 
+
  run curl -s --max-time 10 --connect-timeout 5 \
   -H "User-Agent: OSM-Notes-Ingestion-Test/1.0" \
   "https://api.openstreetmap.org/api/0.6/notes/search.xml?limit=1" \
@@ -117,7 +117,7 @@ teardown() {
 
  # Check if response contains XML
  local RESPONSE_CONTENT
- RESPONSE_CONTENT=$(cat "${TEMP_RESPONSE}" 2>/dev/null || echo "")
+ RESPONSE_CONTENT=$(cat "${TEMP_RESPONSE}" 2> /dev/null || echo "")
  rm -f "${TEMP_RESPONSE}"
 
  if [[ -z "${RESPONSE_CONTENT}" ]]; then
@@ -152,10 +152,13 @@ teardown() {
   EXTRA_REFERER=(-H "Referer: ${DOWNLOAD_REFERER}")
  fi
 
+ # Use curl -o (not shell redirect): with BATS, `run cmd > file` redirects
+ # run's stdout, so the temp file stays empty and version detection fails.
  run timeout 15 curl -s --max-time 15 \
   -H "User-Agent: ${CURL_USER_AGENT}" \
   "${EXTRA_REFERER[@]}" \
-  "https://api.openstreetmap.org/api/versions" > "${TEMP_RESPONSE}" 2>&1
+  -o "${TEMP_RESPONSE}" \
+  "https://api.openstreetmap.org/api/versions" 2>&1
 
  if [ "$status" -ne 0 ]; then
   rm -f "${TEMP_RESPONSE}"
@@ -165,18 +168,18 @@ teardown() {
  # Extract version from XML response
  # Try multiple methods to extract version
  local DETECTED_VERSION
- DETECTED_VERSION=$(grep -oP '<version>\K[0-9.]+' "${TEMP_RESPONSE}" 2>/dev/null | head -n 1 || echo "")
- 
+ DETECTED_VERSION=$(grep -oP '<version>\K[0-9.]+' "${TEMP_RESPONSE}" 2> /dev/null | head -n 1 || echo "")
+
  # Alternative: use sed if grep -P is not available
  if [[ -z "${DETECTED_VERSION}" ]]; then
-  DETECTED_VERSION=$(sed -n 's/.*<version>\([0-9.]*\)<\/version>.*/\1/p' "${TEMP_RESPONSE}" 2>/dev/null | head -n 1 || echo "")
+  DETECTED_VERSION=$(sed -n 's/.*<version>\([0-9.]*\)<\/version>.*/\1/p' "${TEMP_RESPONSE}" 2> /dev/null | head -n 1 || echo "")
  fi
- 
+
  # Alternative: use awk if sed doesn't work
  if [[ -z "${DETECTED_VERSION}" ]]; then
-  DETECTED_VERSION=$(awk -F'[<>]' '/<version>/{print $3; exit}' "${TEMP_RESPONSE}" 2>/dev/null || echo "")
+  DETECTED_VERSION=$(awk -F'[<>]' '/<version>/{print $3; exit}' "${TEMP_RESPONSE}" 2> /dev/null || echo "")
  fi
- 
+
  rm -f "${TEMP_RESPONSE}"
 
  if [[ -z "${DETECTED_VERSION}" ]]; then
@@ -234,13 +237,13 @@ teardown() {
  # Try to get status endpoint
  local TEMP_STATUS
  TEMP_STATUS=$(mktemp)
- 
+
  run timeout 10 curl -s --max-time 10 \
   "https://overpass-api.de/api/status" > "${TEMP_STATUS}" 2>&1
 
  # Status endpoint should respond (even if empty, curl should succeed)
  [ "$status" -eq 0 ]
- 
+
  # Status endpoint may return empty or have content - both are valid
  # Just verify we got a response (no connection error)
  if [[ -f "${TEMP_STATUS}" ]]; then
@@ -334,4 +337,3 @@ teardown() {
  # No need to check status, test logic handles it
  [ 0 -eq 0 ]
 }
-

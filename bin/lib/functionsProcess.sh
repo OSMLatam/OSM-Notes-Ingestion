@@ -435,7 +435,9 @@ function __check_overpass_status() {
  __logd "Checking Overpass API status at ${STATUS_URL}..."
 
  local -a STATUS_CURL=(curl -s)
- __append_curl_download_headers STATUS_CURL
+ if declare -f __append_curl_download_headers > /dev/null 2>&1; then
+  __append_curl_download_headers STATUS_CURL
+ fi
  if ! STATUS_OUTPUT=$("${STATUS_CURL[@]}" "${STATUS_URL}" 2>&1); then
   __logw "Could not reach Overpass API status page, assuming available"
   __log_finish
@@ -763,7 +765,9 @@ function __resolve_note_location_backup() {
  else
   # Fallback to direct curl if __retry_network_operation is not available
   local -a GH_CURL=(curl -s --connect-timeout 30 --max-time 30)
-  __append_curl_download_headers GH_CURL
+  if declare -f __append_curl_download_headers > /dev/null 2>&1; then
+   __append_curl_download_headers GH_CURL
+  fi
   GH_CURL+=(-o "${DOWNLOADED_FILE}" "${DOWNLOAD_URL}")
   if "${GH_CURL[@]}" 2> /dev/null; then
    mkdir -p "$(dirname "${CSV_BACKUP_NOTE_LOCATION_COMPRESSED}")"
@@ -2427,7 +2431,9 @@ EOF
  # shellcheck disable=SC2154
  local PLANET_URL="${PLANET:-https://planet.openstreetmap.org}"
  local -a PLANET_CURL=(-s --max-time 10 -I)
- __append_curl_download_headers PLANET_CURL
+ if declare -f __append_curl_download_headers > /dev/null 2>&1; then
+  __append_curl_download_headers PLANET_CURL
+ fi
  if ! timeout 10 curl "${PLANET_CURL[@]}" \
   "${PLANET_URL}/planet/notes/" > /dev/null 2>&1; then
   __loge "ERROR: Cannot access Planet server at ${PLANET_URL}."
@@ -2445,7 +2451,9 @@ EOF
 
  # Download API versions response (User-Agent / Referer per OSMF API policy)
  local -a API_VERSIONS_CURL_OPTS=(-s --max-time 15)
- __append_curl_download_headers API_VERSIONS_CURL_OPTS
+ if declare -f __append_curl_download_headers > /dev/null 2>&1; then
+  __append_curl_download_headers API_VERSIONS_CURL_OPTS
+ fi
  if ! timeout 15 curl "${API_VERSIONS_CURL_OPTS[@]}" \
   "${API_VERSIONS_URL}" > "${TEMP_API_RESPONSE}" 2> /dev/null; then
   rm -f "${TEMP_API_RESPONSE}"
@@ -2491,7 +2499,9 @@ EOF
  # Use a minimal query to test Overpass accessibility
  local OVERPASS_TEST_QUERY="[out:json][timeout:5];node(1);out;"
  local -a OVERPASS_TEST_CURL=(-s --max-time 15 -X POST)
- __append_curl_download_headers OVERPASS_TEST_CURL
+ if declare -f __append_curl_download_headers > /dev/null 2>&1; then
+  __append_curl_download_headers OVERPASS_TEST_CURL
+ fi
  OVERPASS_TEST_CURL+=(-H "Content-Type: application/x-www-form-urlencoded")
  OVERPASS_TEST_CURL+=(-d "data=${OVERPASS_TEST_QUERY}")
  if ! timeout 15 curl "${OVERPASS_TEST_CURL[@]}" \
@@ -3367,8 +3377,10 @@ function __downloadPlanetNotes {
  fi
 
  # Download MD5 file with retry logic
- local MD5_HDRS
- MD5_HDRS="$(__curl_download_headers_for_shell_string)"
+ local MD5_HDRS=""
+ if declare -f __curl_download_headers_for_shell_string > /dev/null 2>&1; then
+  MD5_HDRS="$(__curl_download_headers_for_shell_string)"
+ fi
  local MD5_OPERATION="curl -s${MD5_HDRS} -o ${PLANET_NOTES_FILE}.bz2.md5 ${PLANET}/notes/${PLANET_NOTES_NAME}.bz2.md5"
  local MD5_CLEANUP="rm -f ${PLANET_NOTES_FILE}.bz2.md5 2>/dev/null || true"
 
@@ -3931,8 +3943,10 @@ function __overpass_download_with_endpoints() {
   rm -f "${LOCAL_JSON_FILE}" "${LOCAL_OUTPUT_FILE}" 2> /dev/null || true
 
   local OP
-  local OVERPASS_HDRS
-  OVERPASS_HDRS="$(__curl_download_headers_for_shell_string)"
+  local OVERPASS_HDRS=""
+  if declare -f __curl_download_headers_for_shell_string > /dev/null 2>&1; then
+   OVERPASS_HDRS="$(__curl_download_headers_for_shell_string)"
+  fi
   __logd "Overpass download uses User-Agent and Referer when configured"
   OP="curl -s${OVERPASS_HDRS} -o ${LOCAL_JSON_FILE} --data-binary @${LOCAL_QUERY_FILE} ${ACTIVE_OVERPASS} 2> ${LOCAL_OUTPUT_FILE}"
   local CL="rm -f ${LOCAL_JSON_FILE} ${LOCAL_OUTPUT_FILE} 2>/dev/null || true"

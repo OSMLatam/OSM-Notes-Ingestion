@@ -30,8 +30,9 @@ fi
 
 # shellcheck disable=SC2317,SC2155,SC2034
 
-# Ensure logging and error handling helpers exist
-if ! declare -f __log_start > /dev/null 2>&1; then
+# Ensure logging and curl header helpers exist (commonFunctions defines both)
+if ! declare -f __log_start > /dev/null 2>&1 \
+ || ! declare -f __append_curl_download_headers > /dev/null 2>&1; then
  if [[ -f "${SCRIPT_BASE_DIRECTORY}/lib/osm-common/commonFunctions.sh" ]]; then
   # shellcheck disable=SC1091
   source "${SCRIPT_BASE_DIRECTORY}/lib/osm-common/commonFunctions.sh"
@@ -437,7 +438,9 @@ function __resolve_geojson_file() {
  else
   # Fallback to curl if __retry_network_operation is not available
   local -a BOUNDARY_GH_CURL=(curl -s)
-  __append_curl_download_headers BOUNDARY_GH_CURL
+  if declare -f __append_curl_download_headers > /dev/null 2>&1; then
+   __append_curl_download_headers BOUNDARY_GH_CURL
+  fi
   BOUNDARY_GH_CURL+=(-o "${DOWNLOADED_FILE}" "${DOWNLOAD_URL}")
   if "${BOUNDARY_GH_CURL[@]}" 2> /dev/null; then
    __logd "Downloaded ${FILE_NAME}.gz from GitHub"
@@ -447,7 +450,9 @@ function __resolve_geojson_file() {
    DOWNLOADED_FILE="${TMP_DIR}/${FILE_NAME}"
    TMP_DECOMPRESSED="${DOWNLOADED_FILE}"
    local -a BOUNDARY_GH_CURL2=(curl -s)
-   __append_curl_download_headers BOUNDARY_GH_CURL2
+   if declare -f __append_curl_download_headers > /dev/null 2>&1; then
+    __append_curl_download_headers BOUNDARY_GH_CURL2
+   fi
    BOUNDARY_GH_CURL2+=(-o "${DOWNLOADED_FILE}" "${DOWNLOAD_URL}")
    if ! "${BOUNDARY_GH_CURL2[@]}" 2> /dev/null; then
     __loge "Failed to download ${FILE_NAME} from GitHub repository"
@@ -2943,10 +2948,12 @@ function __processCountries_impl {
  local MAX_RETRIES_COUNTRIES="${OVERPASS_RETRIES_PER_ENDPOINT:-7}"
  local BASE_DELAY_COUNTRIES="${OVERPASS_BACKOFF_SECONDS:-20}"
  local COUNTRIES_DOWNLOAD_OPERATION
- local COUNTRIES_HDRS
+ local COUNTRIES_HDRS=""
  # shellcheck disable=SC2154
  # COUNTRIES_BOUNDARY_IDS_FILE, COUNTRIES_QUERY_FILE, COUNTRIES_OUTPUT_FILE, and OVERPASS_INTERPRETER are defined earlier in the function
- COUNTRIES_HDRS="$(__curl_download_headers_for_shell_string)"
+ if declare -f __curl_download_headers_for_shell_string > /dev/null 2>&1; then
+  COUNTRIES_HDRS="$(__curl_download_headers_for_shell_string)"
+ fi
  COUNTRIES_DOWNLOAD_OPERATION="curl -s${COUNTRIES_HDRS} -o ${COUNTRIES_BOUNDARY_IDS_FILE} --data-binary @${COUNTRIES_QUERY_FILE} ${OVERPASS_INTERPRETER} 2> ${COUNTRIES_OUTPUT_FILE}"
  local COUNTRIES_CLEANUP="rm -f ${COUNTRIES_BOUNDARY_IDS_FILE} ${COUNTRIES_OUTPUT_FILE} 2>/dev/null || true"
  # shellcheck disable=SC2310
