@@ -13,13 +13,13 @@ dispute that is usually represented that way in OSM”, not “we already import
 its geometry”.
 
 Today the refresh script **does not** query Overpass for those features, so
-**`geom` stays NULL** for `disputed_tagged` until we add an import step (or you
-assign geometry manually). That is different from:
+**`geom` stays NULL** for `disputed_tagged` until you add **`geometry_ewkt`** in
+the JSON, an import step, or manual SQL. That is different from:
 
 - **`country_maritime_intersection`**: geometry from **`ST_Intersection`** of two
   rows in **`countries`** when you set **`pair_relation_ids`** in the JSON.
 - **`unclaimed_territory`**: optional **`bbox`** rectangle in the JSON (e.g. Bir
-  Tawil).
+  Tawil), or **`geometry_ewkt`** for an exact polygon.
 
 So `disputed_tagged` is mainly a **reserved category** for WMS labels and future
 automation, aligned with OSM tagging practice.
@@ -72,12 +72,39 @@ the repo’s source of truth as **`disputed_territories_wms_names.json`**.
 
 ## Geometry hints (JSON)
 
+- **`geometry_ewkt`** (optional): full EWKT string as from PostGIS
+  `ST_AsEWKT(geom)` (must include `SRID=4326;`). Works for **any** `kind` and
+  **takes precedence** over `pair_relation_ids` and `bbox` for that row. Use this
+  when you want a stable, hand-maintained geometry without Overpass.
 - **`pair_relation_ids`**: two OSM relation ids that must exist in
   `countries.country_id`. Produces `ST_Intersection` of the two polygons.
 - **`bbox`**: `[min_lon, min_lat, max_lon, max_lat]` for `unclaimed_territory`
   (e.g. Bir Tawil rectangle).
 
 See [What `disputed_tagged` means](#what-disputed_tagged-means) above.
+
+Tests may set **`DISPUTED_WMS_JSON_OVERRIDE`** to point at an alternate JSON
+file (same `.entries` shape).
+
+## Geometry coverage (after refresh)
+
+| Rows | How `geom` is filled |
+|------|----------------------|
+| **`country_maritime_intersection`** with **`pair_relation_ids`** | `ST_Intersection` of the two `countries` geometries (both `country_id` must exist). |
+| **`unclaimed_territory`** with **`bbox`** | Axis-aligned rectangle in WGS84. |
+| **`disputed_tagged`** | **Not** auto-filled today; see **`geometry_requirement`** in the JSON per entry. |
+| Any pair missing from **`countries`** | **`geom` stays NULL** (no error). Check Overpass country list vs relation ids. |
+
+**Olivenza** was moved from **`disputed_tagged`** to **`country_maritime_intersection`** with PT/ES
+pair. If you already had a DB seeded with the old kind, delete the old row or update kind before
+re-seeding:
+
+```sql
+DELETE FROM disputed_territories_wms
+ WHERE kind = 'disputed_tagged' AND name = 'Olivenza region';
+```
+
+Then re-run `disputed_territories_wms_02_seed_reference_names.sql` or `--init` on a test DB.
 
 ## WMS publication
 
@@ -94,4 +121,4 @@ country overlap gaps. The ingestion table **`disputed_territories_wms`** is a
 
 ---
 **Author:** Andres Gomez (AngocA)  
-**Version:** 2026-04-07
+**Version:** 2026-04-07 (geometry hints expanded)

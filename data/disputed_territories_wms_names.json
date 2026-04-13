@@ -1,7 +1,7 @@
 {
-  "version": "2026-04-06",
+  "version": "2026-04-07",
   "description": "Canonical names for disputed_territories_wms (WMS only; not used by ingestion).",
-  "geometry_hints": "pair_relation_ids [a,b] are OSM relation ids in countries.country_id; bbox is [min_lon,min_lat,max_lon,max_lat] for unclaimed_territory.",
+  "geometry_hints": "Optional geometry_ewkt (PostGIS EWKT, SRID=4326;...) overrides pair/bbox for any kind. pair_relation_ids [a,b] must exist as countries.country_id. bbox for unclaimed_territory. geometry_requirement documents rows still NULL when no EWKT and no auto hint.",
   "sources": [
     "https://wiki.openstreetmap.org/wiki/Disputed_territories",
     "https://en.wikipedia.org/wiki/List_of_territorial_disputes"
@@ -23,91 +23,106 @@
       "kind": "country_maritime_intersection",
       "name": "Mont Blanc summit",
       "description": "Competing FR/IT summit boundary representations.",
-      "reference_url": "https://wiki.openstreetmap.org/wiki/Disputed_territories"
+      "reference_url": "https://wiki.openstreetmap.org/wiki/Disputed_territories",
+      "pair_relation_ids": [2202162, 365331]
     },
     {
       "kind": "country_maritime_intersection",
       "name": "Oyster Pond",
-      "description": "Saint-Martin / Sint Maarten overlapping claims.",
-      "reference_url": "https://wiki.openstreetmap.org/wiki/Disputed_territories"
+      "description": "Saint-Martin (FR collectivity) vs Sint Maarten (SX). Fails if countries only has admin_level=2 rows; then add relations to Overpass country list or set geom manually.",
+      "reference_url": "https://wiki.openstreetmap.org/wiki/Disputed_territories",
+      "pair_relation_ids": [1891583, 1231790]
     },
     {
       "kind": "country_maritime_intersection",
       "name": "Carlingford Lough and Lough Foyle",
       "description": "IE/UK maritime boundary context.",
-      "reference_url": "https://wiki.openstreetmap.org/wiki/Disputed_territories"
+      "reference_url": "https://wiki.openstreetmap.org/wiki/Disputed_territories",
+      "pair_relation_ids": [304196, 62149]
     },
     {
       "kind": "country_maritime_intersection",
       "name": "Lake Constance",
-      "description": "DE/AT/CH boundary through lake.",
-      "reference_url": "https://wiki.openstreetmap.org/wiki/Disputed_territories"
+      "description": "DE/AT overlap in lake (trilateral DE/AT/CH not fully modeled here).",
+      "reference_url": "https://wiki.openstreetmap.org/wiki/Disputed_territories",
+      "pair_relation_ids": [51477, 16239]
     },
     {
       "kind": "country_maritime_intersection",
       "name": "Croatia-Serbia border (Danube sector)",
       "description": "River-shift and island claims along Danube.",
-      "reference_url": "https://wiki.openstreetmap.org/wiki/Disputed_territories"
+      "reference_url": "https://wiki.openstreetmap.org/wiki/Disputed_territories",
+      "pair_relation_ids": [214885, 59426]
     },
     {
       "kind": "country_maritime_intersection",
       "name": "Island of Vukovar",
-      "description": "Competing HR/RS boundary representations.",
-      "reference_url": "https://wiki.openstreetmap.org/wiki/Disputed_territories"
+      "description": "Competing HR/RS boundary representations (same country pair as Danube sector; geometry may match that strip).",
+      "reference_url": "https://wiki.openstreetmap.org/wiki/Disputed_territories",
+      "pair_relation_ids": [214885, 59426]
     },
     {
       "kind": "country_maritime_intersection",
       "name": "Gulf of Piran",
       "description": "SI/HR maritime delimitation disputes.",
-      "reference_url": "https://wiki.openstreetmap.org/wiki/Disputed_territories"
+      "reference_url": "https://wiki.openstreetmap.org/wiki/Disputed_territories",
+      "pair_relation_ids": [182132, 214885]
     },
     {
       "kind": "country_maritime_intersection",
       "name": "Machias Seal Island",
       "description": "CA/US competing sovereignty.",
-      "reference_url": "https://wiki.openstreetmap.org/wiki/Disputed_territories"
+      "reference_url": "https://wiki.openstreetmap.org/wiki/Disputed_territories",
+      "pair_relation_ids": [1428125, 148838]
     },
     {
       "kind": "country_maritime_intersection",
       "name": "Dixon Entrance",
       "description": "CA/US competing maritime representations.",
-      "reference_url": "https://wiki.openstreetmap.org/wiki/Disputed_territories"
+      "reference_url": "https://wiki.openstreetmap.org/wiki/Disputed_territories",
+      "pair_relation_ids": [1428125, 148838]
+    },
+    {
+      "kind": "country_maritime_intersection",
+      "name": "Olivenza region",
+      "description": "PT historical claim vs ES administration (country polygon intersection).",
+      "reference_url": "https://wiki.openstreetmap.org/wiki/Disputed_territories",
+      "pair_relation_ids": [295480, 1311341]
     },
     {
       "kind": "disputed_tagged",
       "name": "Western Sahara",
       "description": "Sahrawi / Morocco competing claims.",
-      "reference_url": "https://wiki.openstreetmap.org/wiki/Disputed_territories"
+      "reference_url": "https://wiki.openstreetmap.org/wiki/Disputed_territories",
+      "geometry_requirement": "Import disputed polygons via Overpass (disputed/claimed_by) or manual geom; country pairs do not represent the conflict well."
     },
     {
       "kind": "disputed_tagged",
       "name": "Kashmir region",
       "description": "IN/PK/CN context.",
-      "reference_url": "https://wiki.openstreetmap.org/wiki/Disputed_territories"
+      "reference_url": "https://wiki.openstreetmap.org/wiki/Disputed_territories",
+      "geometry_requirement": "Multi-party; Overpass or external boundary dataset; optional coarse bbox if only a locator map is needed."
     },
     {
       "kind": "disputed_tagged",
       "name": "South Ossetia",
       "description": "GE/RU context.",
-      "reference_url": "https://wiki.openstreetmap.org/wiki/Disputed_territories"
+      "reference_url": "https://wiki.openstreetmap.org/wiki/Disputed_territories",
+      "geometry_requirement": "Overpass on admin/disputed features in region, or manual GeoJSON."
     },
     {
       "kind": "disputed_tagged",
       "name": "Abkhazia",
       "description": "GE/RU context.",
-      "reference_url": "https://wiki.openstreetmap.org/wiki/Disputed_territories"
-    },
-    {
-      "kind": "disputed_tagged",
-      "name": "Olivenza region",
-      "description": "PT historical claim vs ES administration.",
-      "reference_url": "https://wiki.openstreetmap.org/wiki/Disputed_territories"
+      "reference_url": "https://wiki.openstreetmap.org/wiki/Disputed_territories",
+      "geometry_requirement": "Overpass on admin/disputed features in region, or manual GeoJSON."
     },
     {
       "kind": "disputed_tagged",
       "name": "Mar de Grau (Peru maritime claim)",
       "description": "Peru constitutional maritime claim context.",
-      "reference_url": "https://wiki.openstreetmap.org/wiki/Disputed_territories"
+      "reference_url": "https://wiki.openstreetmap.org/wiki/Disputed_territories",
+      "geometry_requirement": "Maritime claim geometry: not a simple two-country land intersection; Overpass EEZ/maritime or manual."
     },
     {
       "kind": "unclaimed_territory",

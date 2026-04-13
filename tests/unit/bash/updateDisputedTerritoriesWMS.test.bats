@@ -3,7 +3,7 @@
 # Tests for bin/process/updateDisputedTerritoriesWMS.sh
 #
 # Author: Andres Gomez (AngocA)
-# Version: 2026-04-06
+# Version: 2026-04-07
 
 bats_require_minimum_version 1.5.0
 
@@ -41,6 +41,8 @@ teardown() {
  [[ "$output" == *"BEGIN;"* ]]
  [[ "$output" == *"disputed_territories_wms"* ]]
  [[ "$output" == *"Ems-Dollard mouth"* ]]
+ [[ "$output" == *"Mont Blanc summit"* ]]
+ [[ "$output" == *"Olivenza region"* ]]
  [[ "$output" == *"Bir Tawil"* ]]
  [[ "$output" == *"COMMIT;"* ]]
 }
@@ -49,4 +51,24 @@ teardown() {
  run jq -e '.entries | length > 0' \
   "${SCRIPT_BASE_DIRECTORY}/data/disputed_territories_wms_names.json"
  [ "$status" -eq 0 ]
+}
+
+@test "geometry_ewkt emits ST_GeomFromEWKT when DISPUTED_WMS_JSON_OVERRIDE is set" {
+ local OVERRIDE_JSON="${TMP_DIR}/override_disputed_wms.json"
+ cat > "${OVERRIDE_JSON}" << 'JSON'
+{
+  "entries": [
+    {
+      "kind": "disputed_tagged",
+      "name": "Hardcoded EWKT test",
+      "geometry_ewkt": "SRID=4326;MULTIPOLYGON(((0 0,1 0,1 1,0 1,0 0)))"
+    }
+  ]
+}
+JSON
+ export DISPUTED_WMS_JSON_OVERRIDE="${OVERRIDE_JSON}"
+ run bash "${SCRIPT_BASE_DIRECTORY}/bin/process/updateDisputedTerritoriesWMS.sh" --dry-run
+ [ "$status" -eq 0 ]
+ [[ "$output" == *"ST_GeomFromEWKT"* ]]
+ [[ "$output" == *"Hardcoded EWKT test"* ]]
 }

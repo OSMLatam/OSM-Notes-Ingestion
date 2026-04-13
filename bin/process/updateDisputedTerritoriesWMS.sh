@@ -3,17 +3,18 @@
 # Refresh disputed_territories_wms geometries from JSON hints and countries table.
 # Standalone WMS layer; not used by note ingestion. Schedule after updateCountries.
 #
-# Reads data/disputed_territories_wms_names.json:
+# Reads data/disputed_territories_wms_names.json (or DISPUTED_WMS_JSON_OVERRIDE):
+#   - geometry_ewkt: optional hardcoded EWKT (SRID=4326;...). Overrides pair/bbox.
 #   - pair_relation_ids [a,b]: ST_Intersection of countries (country_id).
 #   - bbox [min_lon,min_lat,max_lon,max_lat]: rectangle for unclaimed_territory.
-# disputed_tagged rows stay NULL until an Overpass import step exists.
+# disputed_tagged rows without geometry_ewkt stay NULL until Overpass or manual EWKT.
 #
 # Error codes: 1 help, 241 missing tool, 242 invalid arg, 252 validation, 255 general.
 #
 # Author: Andres Gomez (AngocA)
-# Version: 2026-04-06
+# Version: 2026-04-07
 
-VERSION="2026-04-06"
+VERSION="2026-04-07"
 
 set -u
 set -e
@@ -41,7 +42,9 @@ readonly BASENAME
 
 export PGAPPNAME="${BASENAME}"
 
-declare -r DISPUTED_WMS_JSON="${SCRIPT_BASE_DIRECTORY}/data/disputed_territories_wms_names.json"
+declare DISPUTED_WMS_JSON
+DISPUTED_WMS_JSON="${DISPUTED_WMS_JSON_OVERRIDE:-${SCRIPT_BASE_DIRECTORY}/data/disputed_territories_wms_names.json}"
+readonly DISPUTED_WMS_JSON
 declare -r SQL_WMS_DIR="${SCRIPT_BASE_DIRECTORY}/sql/wms"
 declare -r SQL_WMS_CREATE="${SQL_WMS_DIR}/disputed_territories_wms_01_create_table.sql"
 declare -r SQL_WMS_SEED="${SQL_WMS_DIR}/disputed_territories_wms_02_seed_reference_names.sql"
@@ -59,7 +62,8 @@ if [[ "${1:-}" == "-h" ]] || [[ "${1:-}" == "--help" ]]; then
  echo "  ${BASENAME}.sh --help          # This help"
  echo
  echo "JSON: ${DISPUTED_WMS_JSON}"
- echo "disputed_tagged entries are skipped until Overpass import is implemented."
+ echo "Optional: DISPUTED_WMS_JSON_OVERRIDE=/path/to.json for tests."
+ echo "Hardcoded geom: geometry_ewkt per entry (see JSON geometry_hints)."
  exit "${ERROR_HELP_MESSAGE:-1}"
 fi
 
@@ -106,7 +110,9 @@ function __sql_escape_literal() {
 }
 
 ##
-# Writes UPDATE statements for pair_relation_ids and bbox entries into OUTPUT_FILE.
+# Writes UPDATE statements (geometry_ewkt, pair_relation_ids, bbox) into OUTPUT_FILE.
+# Precedence per entry: geometry_ewkt, else pair (country_maritime only), else bbox
+# (unclaimed only).
 # Parameters:
 #   $1 - path to output .sql file.
 #   $2 - path to disputed_territories_wms_names.json.
@@ -124,6 +130,8 @@ function __write_geometry_updates_sql() {
  local MIN_LAT
  local MAX_LON
  local MAX_LAT
+ local EWKT_RAW
+ local EWKT_ESC
 
  {
   echo "BEGIN;"
@@ -133,6 +141,18 @@ function __write_geometry_updates_sql() {
  while IFS= read -r ENTRY; do
   KIND=$(echo "${ENTRY}" | jq -r '.kind')
   NAME_ESC=$(__sql_escape_literal "$(echo "${ENTRY}" | jq -r '.name')")
+  EWKT_RAW=$(echo "${ENTRY}" | jq -r '.geometry_ewkt // ""')
+  if [[ -n "${EWKT_RAW}" ]] && [[ "${EWKT_RAW}" != "null" ]]; then
+   EWKT_ESC=$(__sql_escape_literal "${EWKT_RAW}")
+   cat >> "${OUTPUT_FILE}" << EOF
+UPDATE disputed_territories_wms AS d
+SET geom = ST_Multi(ST_GeomFromEWKT('${EWKT_ESC}'))::geometry(MULTIPOLYGON,4326),
+    updated_at = CURRENT_TIMESTAMP
+WHERE d.kind = '${KIND}'::disputed_territory_kind
+ AND d.name = '${NAME_ESC}';
+EOF
+   continue
+  fi
   if echo "${ENTRY}" | jq -e '.pair_relation_ids | length == 2' > /dev/null 2>&1; then
    if [[ "${KIND}" != "country_maritime_intersection" ]]; then
     __logw "Skipping pair_relation_ids for entry with kind=${KIND} (expected country_maritime_intersection)."
