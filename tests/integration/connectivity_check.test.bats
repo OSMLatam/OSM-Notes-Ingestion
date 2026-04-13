@@ -3,7 +3,7 @@
 # Connectivity Check Tests
 # Verify external service availability before running integration tests
 # Author: Andres Gomez (AngocA)
-# Version: 2026-01-16
+# Version: 2026-04-11
 
 load "$(dirname "$BATS_TEST_FILENAME")/../test_helper.bash"
 # Note: service_availability_helpers.bash is automatically loaded by test_helper.bash
@@ -143,11 +143,13 @@ teardown() {
   skip "curl not available"
  fi
 
- # Check API versions endpoint
+ # Check API versions endpoint (User-Agent per OSMF API policy)
  local TEMP_RESPONSE
  TEMP_RESPONSE=$(mktemp)
+ local CURL_USER_AGENT="${DOWNLOAD_USER_AGENT:-OSM-Notes-Ingestion-ConnectivityTest/1.0}"
  
  run timeout 15 curl -s --max-time 15 \
+  -H "User-Agent: ${CURL_USER_AGENT}" \
   "https://api.openstreetmap.org/api/versions" > "${TEMP_RESPONSE}" 2>&1
 
  if [ "$status" -ne 0 ]; then

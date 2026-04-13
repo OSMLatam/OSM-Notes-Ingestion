@@ -3,7 +3,7 @@
 # Prerequisites Network Tests
 # Tests for network connectivity validation
 # Author: Andres Gomez (AngocA)
-# Version: 2025-12-13
+# Version: 2026-04-11
 
 load "$(dirname "$BATS_TEST_FILENAME")/../../test_helper.bash"
 load "$(dirname "${BATS_TEST_FILENAME}")/performance_edge_cases_helper.bash"
@@ -96,6 +96,28 @@ teardown() {
  [ "$status" -eq 0 ]
  
  rm -f "${TEMP_FILE}"
+}
+
+@test "OSM /api/versions prerequisite curl includes User-Agent when DOWNLOAD_USER_AGENT is set" {
+ export DOWNLOAD_USER_AGENT="PrereqTest/1.0 (+https://example.test)"
+ local -a API_VERSIONS_CURL_OPTS=(-s --max-time 15)
+ if [[ -n "${DOWNLOAD_USER_AGENT:-}" ]]; then
+  API_VERSIONS_CURL_OPTS+=(-H "User-Agent: ${DOWNLOAD_USER_AGENT}")
+ fi
+ local OPT_STR
+ OPT_STR=$(printf '%s ' "${API_VERSIONS_CURL_OPTS[@]}")
+ [[ "${OPT_STR}" == *"User-Agent: ${DOWNLOAD_USER_AGENT}"* ]]
+}
+
+@test "OSM /api/versions prerequisite curl omits User-Agent when DOWNLOAD_USER_AGENT is unset" {
+ unset DOWNLOAD_USER_AGENT
+ local -a API_VERSIONS_CURL_OPTS=(-s --max-time 15)
+ if [[ -n "${DOWNLOAD_USER_AGENT:-}" ]]; then
+  API_VERSIONS_CURL_OPTS+=(-H "User-Agent: ${DOWNLOAD_USER_AGENT}")
+ fi
+ local OPT_STR
+ OPT_STR=$(printf '%s ' "${API_VERSIONS_CURL_OPTS[@]}")
+ [[ "${OPT_STR}" != *User-Agent* ]]
 }
 
 @test "__checkPrereqsCommands should validate OSM API version 0.6" {

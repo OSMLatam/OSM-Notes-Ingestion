@@ -3,7 +3,7 @@
 # Service Availability Helpers
 # Check if external services are available before running tests
 # Author: Andres Gomez (AngocA)
-# Version: 2026-01-23
+# Version: 2026-04-11
 
 # =============================================================================
 # Service Availability Check Functions
@@ -46,11 +46,13 @@ __check_osm_api_version() {
   return 1
  fi
  
- # Check API versions endpoint
+ # Check API versions endpoint (User-Agent per OSMF API policy)
  local TEMP_RESPONSE
  TEMP_RESPONSE=$(mktemp)
+ local CURL_USER_AGENT="${DOWNLOAD_USER_AGENT:-OSM-Notes-Ingestion-Test/1.0}"
  
  if ! timeout "${TIMEOUT}" curl -s --max-time "${TIMEOUT}" \
+  -H "User-Agent: ${CURL_USER_AGENT}" \
   "https://api.openstreetmap.org/api/versions" > "${TEMP_RESPONSE}" 2>/dev/null; then
   rm -f "${TEMP_RESPONSE}"
   export __OSM_API_VERSION=""

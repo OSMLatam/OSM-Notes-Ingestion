@@ -5,8 +5,8 @@
 # It loads all function modules for use across the project.
 #
 # Author: Andres Gomez (AngocA)
-# Version: 2026-04-02
-VERSION="2026-04-02"
+# Version: 2026-04-11
+VERSION="2026-04-11"
 # Note: __checkPrereqsCommands below overrides commonFunctions.sh after sourcing.
 # The common copy checks a minimal CLI set plus __validate_gnu_awk; this copy adds
 # DB, files, and network checks for ingestion scripts.
@@ -2435,8 +2435,13 @@ EOF
  local TEMP_API_RESPONSE
  TEMP_API_RESPONSE=$(mktemp)
 
- # Download API versions response to check version
- if ! timeout 15 curl -s --max-time 15 "${API_VERSIONS_URL}" > "${TEMP_API_RESPONSE}" 2> /dev/null; then
+ # Download API versions response to check version (User-Agent per OSMF API policy)
+ local -a API_VERSIONS_CURL_OPTS=(-s --max-time 15)
+ if [[ -n "${DOWNLOAD_USER_AGENT:-}" ]]; then
+  API_VERSIONS_CURL_OPTS+=(-H "User-Agent: ${DOWNLOAD_USER_AGENT}")
+ fi
+ if ! timeout 15 curl "${API_VERSIONS_CURL_OPTS[@]}" \
+  "${API_VERSIONS_URL}" > "${TEMP_API_RESPONSE}" 2> /dev/null; then
   rm -f "${TEMP_API_RESPONSE}"
   __loge "ERROR: Cannot access OSM API at ${API_VERSIONS_URL}."
   __loge "Please check your internet connection and firewall settings."
