@@ -2,7 +2,7 @@
 -- Keep rows aligned with data/disputed_territories_wms_names.json (same kind + name).
 --
 -- Author: Andres Gomez (AngocA)
--- Version: 2026-04-06
+-- Version: 2026-04-05
 
 INSERT INTO disputed_territories_wms (kind, name, description, reference_url)
 VALUES
@@ -67,6 +67,12 @@ VALUES
     'https://wiki.openstreetmap.org/wiki/Disputed_territories'
   ),
   (
+    'country_maritime_intersection'::disputed_territory_kind,
+    'Olivenza region',
+    'PT historical claim vs ES administration (country polygon intersection).',
+    'https://wiki.openstreetmap.org/wiki/Disputed_territories'
+  ),
+  (
     'disputed_tagged'::disputed_territory_kind,
     'Western Sahara',
     'Sahrawi / Morocco competing claims.',
@@ -88,12 +94,6 @@ VALUES
     'disputed_tagged'::disputed_territory_kind,
     'Abkhazia',
     'GE/RU context.',
-    'https://wiki.openstreetmap.org/wiki/Disputed_territories'
-  ),
-  (
-    'disputed_tagged'::disputed_territory_kind,
-    'Olivenza region',
-    'PT historical claim vs ES administration.',
     'https://wiki.openstreetmap.org/wiki/Disputed_territories'
   ),
   (
