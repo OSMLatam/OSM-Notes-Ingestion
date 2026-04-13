@@ -6,7 +6,7 @@
 # This file is loaded INSTEAD of etc/properties.sh when in test mode.
 #
 # Author: Andres Gomez (AngocA)
-# Version: 2026-03-26
+# Version: 2026-04-11
 
 # Database configuration for tests
 # These values override production values for test environments
@@ -85,6 +85,10 @@ declare PROJECT_CONTACT_EMAIL="${PROJECT_CONTACT_EMAIL:-notes@osm.lat}"
 if [[ -z "${DOWNLOAD_USER_AGENT:-}" ]]; then
   # Do not break lines; keep UA in one line for header correctness
   DOWNLOAD_USER_AGENT="${PROJECT_NAME}/${PROJECT_VERSION} (+${PROJECT_URL}; contact: ${PROJECT_CONTACT_EMAIL})"
+fi
+
+if [[ ! -v DOWNLOAD_REFERER ]]; then
+  DOWNLOAD_REFERER="${PROJECT_URL}"
 fi
 
 # Processing configuration.

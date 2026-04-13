@@ -120,6 +120,20 @@ teardown() {
  [[ "${OPT_STR}" != *User-Agent* ]]
 }
 
+@test "OSM /api/versions prerequisite curl includes Referer when DOWNLOAD_REFERER is set" {
+ export DOWNLOAD_REFERER="https://example.test/project"
+ local -a API_VERSIONS_CURL_OPTS=(-s --max-time 15)
+ if [[ -n "${DOWNLOAD_USER_AGENT:-}" ]]; then
+  API_VERSIONS_CURL_OPTS+=(-H "User-Agent: ${DOWNLOAD_USER_AGENT}")
+ fi
+ if [[ -n "${DOWNLOAD_REFERER:-}" ]]; then
+  API_VERSIONS_CURL_OPTS+=(-H "Referer: ${DOWNLOAD_REFERER}")
+ fi
+ local OPT_STR
+ OPT_STR=$(printf '%s ' "${API_VERSIONS_CURL_OPTS[@]}")
+ [[ "${OPT_STR}" == *"Referer: ${DOWNLOAD_REFERER}"* ]]
+}
+
 @test "__checkPrereqsCommands should validate OSM API version 0.6" {
  # Create mock API response from /api/versions endpoint with version 0.6
  local TEMP_RESPONSE

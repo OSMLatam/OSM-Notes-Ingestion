@@ -2,8 +2,8 @@
 
 # Boundary Processing Functions for OSM-Notes-profile
 # Author: Andres Gomez (AngocA)
-# Version: 2026-03-26
-VERSION="2026-03-26"
+# Version: 2026-04-11
+VERSION="2026-04-11"
 # 2026-03-20: New download flow — if all Overpass downloads fail but backup already
 #   filled countries/countries_new, continue (duplicate OSM relations / placeholders).
 
@@ -436,14 +436,20 @@ function __resolve_geojson_file() {
   fi
  else
   # Fallback to curl if __retry_network_operation is not available
-  if curl -s -H "User-Agent: ${DOWNLOAD_USER_AGENT}" -o "${DOWNLOADED_FILE}" "${DOWNLOAD_URL}" 2> /dev/null; then
+  local -a BOUNDARY_GH_CURL=(curl -s)
+  __append_curl_download_headers BOUNDARY_GH_CURL
+  BOUNDARY_GH_CURL+=(-o "${DOWNLOADED_FILE}" "${DOWNLOAD_URL}")
+  if "${BOUNDARY_GH_CURL[@]}" 2> /dev/null; then
    __logd "Downloaded ${FILE_NAME}.gz from GitHub"
   else
    __logw "Failed to download ${FILE_NAME}.gz from GitHub, trying uncompressed version..."
    DOWNLOAD_URL="${BOUNDARIES_DATA_REPO_URL}/${FILE_NAME}"
    DOWNLOADED_FILE="${TMP_DIR}/${FILE_NAME}"
    TMP_DECOMPRESSED="${DOWNLOADED_FILE}"
-   if ! curl -s -H "User-Agent: ${DOWNLOAD_USER_AGENT}" -o "${DOWNLOADED_FILE}" "${DOWNLOAD_URL}" 2> /dev/null; then
+   local -a BOUNDARY_GH_CURL2=(curl -s)
+   __append_curl_download_headers BOUNDARY_GH_CURL2
+   BOUNDARY_GH_CURL2+=(-o "${DOWNLOADED_FILE}" "${DOWNLOAD_URL}")
+   if ! "${BOUNDARY_GH_CURL2[@]}" 2> /dev/null; then
     __loge "Failed to download ${FILE_NAME} from GitHub repository"
     return 1
    fi
@@ -2937,9 +2943,11 @@ function __processCountries_impl {
  local MAX_RETRIES_COUNTRIES="${OVERPASS_RETRIES_PER_ENDPOINT:-7}"
  local BASE_DELAY_COUNTRIES="${OVERPASS_BACKOFF_SECONDS:-20}"
  local COUNTRIES_DOWNLOAD_OPERATION
+ local COUNTRIES_HDRS
  # shellcheck disable=SC2154
  # COUNTRIES_BOUNDARY_IDS_FILE, COUNTRIES_QUERY_FILE, COUNTRIES_OUTPUT_FILE, and OVERPASS_INTERPRETER are defined earlier in the function
- COUNTRIES_DOWNLOAD_OPERATION="curl -s -H \"User-Agent: ${DOWNLOAD_USER_AGENT}\" -o ${COUNTRIES_BOUNDARY_IDS_FILE} --data-binary @${COUNTRIES_QUERY_FILE} ${OVERPASS_INTERPRETER} 2> ${COUNTRIES_OUTPUT_FILE}"
+ COUNTRIES_HDRS="$(__curl_download_headers_for_shell_string)"
+ COUNTRIES_DOWNLOAD_OPERATION="curl -s${COUNTRIES_HDRS} -o ${COUNTRIES_BOUNDARY_IDS_FILE} --data-binary @${COUNTRIES_QUERY_FILE} ${OVERPASS_INTERPRETER} 2> ${COUNTRIES_OUTPUT_FILE}"
  local COUNTRIES_CLEANUP="rm -f ${COUNTRIES_BOUNDARY_IDS_FILE} ${COUNTRIES_OUTPUT_FILE} 2>/dev/null || true"
  # shellcheck disable=SC2310
  # Intentional: check return value explicitly
@@ -3608,8 +3616,13 @@ EOF
  set +e
  # shellcheck disable=SC2154
  # MARITIME_BOUNDARY_IDS_FILE is defined earlier in the function
- curl -s -H "User-Agent: ${DOWNLOAD_USER_AGENT}" -o "${MARITIME_BOUNDARY_IDS_FILE}" \
-  --data-binary "@${OVERPASS_MARITIMES}" "${OVERPASS_INTERPRETER}"
+ local -a MARITIME_IDS_CURL=(curl -s)
+ if declare -f __append_curl_download_headers > /dev/null 2>&1; then
+  __append_curl_download_headers MARITIME_IDS_CURL
+ fi
+ MARITIME_IDS_CURL+=(-o "${MARITIME_BOUNDARY_IDS_FILE}"
+  --data-binary "@${OVERPASS_MARITIMES}" "${OVERPASS_INTERPRETER}")
+ "${MARITIME_IDS_CURL[@]}"
  RET=${?}
  set -e
  if [[ "${RET}" -ne 0 ]]; then

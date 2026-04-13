@@ -2,10 +2,10 @@
 
 # Note Processing Functions for OSM-Notes-profile
 # Author: Andres Gomez (AngocA)
-# Version: 2026-03-26
+# Version: 2026-04-11
 # shellcheck disable=SC2034
 
-VERSION="2026-03-26"
+VERSION="2026-04-11"
 
 # shellcheck disable=SC2317,SC2155,SC2034
 
@@ -977,7 +977,18 @@ function __check_network_connectivity() {
  __logd "Checking network connectivity"
 
  for URL in "${TEST_URLS[@]}"; do
-  if timeout "${TIMEOUT}" curl -s --connect-timeout 5 -H "User-Agent: ${DOWNLOAD_USER_AGENT}" "${URL}" > /dev/null 2>&1; then
+  local -a NET_CURL=(curl -s --connect-timeout 5)
+  if declare -f __append_curl_download_headers > /dev/null 2>&1; then
+   __append_curl_download_headers NET_CURL
+  else
+   if [[ -n "${DOWNLOAD_USER_AGENT:-}" ]]; then
+    NET_CURL+=(-H "User-Agent: ${DOWNLOAD_USER_AGENT}")
+   fi
+   if [[ -n "${DOWNLOAD_REFERER:-}" ]]; then
+    NET_CURL+=(-H "Referer: ${DOWNLOAD_REFERER}")
+   fi
+  fi
+  if timeout "${TIMEOUT}" "${NET_CURL[@]}" "${URL}" > /dev/null 2>&1; then
    __logi "Network connectivity confirmed via ${URL}"
    __log_finish
    return 0
@@ -2189,7 +2200,18 @@ if ! declare -f __check_overpass_status > /dev/null 2>&1; then
 
   __logd "Checking Overpass API status at ${STATUS_URL}..."
 
-  if ! STATUS_OUTPUT=$(curl -s -H "User-Agent: ${DOWNLOAD_USER_AGENT}" "${STATUS_URL}" 2>&1); then
+  local -a STATUS_CURL_FALLBACK=(curl -s)
+  if declare -f __append_curl_download_headers > /dev/null 2>&1; then
+   __append_curl_download_headers STATUS_CURL_FALLBACK
+  else
+   if [[ -n "${DOWNLOAD_USER_AGENT:-}" ]]; then
+    STATUS_CURL_FALLBACK+=(-H "User-Agent: ${DOWNLOAD_USER_AGENT}")
+   fi
+   if [[ -n "${DOWNLOAD_REFERER:-}" ]]; then
+    STATUS_CURL_FALLBACK+=(-H "Referer: ${DOWNLOAD_REFERER}")
+   fi
+  fi
+  if ! STATUS_OUTPUT=$("${STATUS_CURL_FALLBACK[@]}" "${STATUS_URL}" 2>&1); then
    __logw "Could not reach Overpass API status page, assuming available"
    __log_finish
    echo "0"
@@ -2306,10 +2328,21 @@ function __retry_network_operation() {
  fi
 
  while [[ ${RETRY_COUNT} -lt ${LOCAL_MAX_RETRIES} ]]; do
-  # Use curl with specific error handling and timeout
-  if curl -s --connect-timeout "${TIMEOUT}" --max-time "${TIMEOUT}" \
-   -H "User-Agent: ${DOWNLOAD_USER_AGENT}" \
-   -o "${OUTPUT_FILE}" "${URL}"; then
+  local -a NET_OP_CURL=(
+   curl -s --connect-timeout "${TIMEOUT}" --max-time "${TIMEOUT}"
+  )
+  if declare -f __append_curl_download_headers > /dev/null 2>&1; then
+   __append_curl_download_headers NET_OP_CURL
+  else
+   if [[ -n "${DOWNLOAD_USER_AGENT:-}" ]]; then
+    NET_OP_CURL+=(-H "User-Agent: ${DOWNLOAD_USER_AGENT}")
+   fi
+   if [[ -n "${DOWNLOAD_REFERER:-}" ]]; then
+    NET_OP_CURL+=(-H "Referer: ${DOWNLOAD_REFERER}")
+   fi
+  fi
+  NET_OP_CURL+=(-o "${OUTPUT_FILE}" "${URL}")
+  if "${NET_OP_CURL[@]}"; then
    # Verify the downloaded file exists and has content
    if [[ -f "${OUTPUT_FILE}" ]] && [[ -s "${OUTPUT_FILE}" ]]; then
     __logd "Network operation succeeded on attempt $((RETRY_COUNT + 1))"
@@ -2421,14 +2454,27 @@ function __retry_overpass_api() {
  )
 
  # Try HTTP/2 if supported (fallback to HTTP/1.1 if not)
- if curl --http2 -s --max-time 5 "https://overpass-api.de" > /dev/null 2>&1; then
+ local -a OVERPASS_HTTP2_PROBE=(curl --http2 -s --max-time 5)
+ if declare -f __append_curl_download_headers > /dev/null 2>&1; then
+  __append_curl_download_headers OVERPASS_HTTP2_PROBE
+ fi
+ if "${OVERPASS_HTTP2_PROBE[@]}" "https://overpass-api.de" > /dev/null 2>&1; then
   CURL_OPTS+=("--http2")
   __logd "Using HTTP/2 for Overpass API"
  else
   __logd "HTTP/2 not available, using HTTP/1.1 with keep-alive"
  fi
 
- CURL_OPTS+=("-H" "User-Agent: ${DOWNLOAD_USER_AGENT}")
+ if declare -f __append_curl_download_headers > /dev/null 2>&1; then
+  __append_curl_download_headers CURL_OPTS
+ else
+  if [[ -n "${DOWNLOAD_USER_AGENT:-}" ]]; then
+   CURL_OPTS+=("-H" "User-Agent: ${DOWNLOAD_USER_AGENT}")
+  fi
+  if [[ -n "${DOWNLOAD_REFERER:-}" ]]; then
+   CURL_OPTS+=("-H" "Referer: ${DOWNLOAD_REFERER}")
+  fi
+ fi
 
  CURL_OPTS+=("-o" "${OUTPUT_FILE}")
 
@@ -2603,15 +2649,26 @@ function __retry_osm_api() {
  # Try HTTP/2 if supported (fallback to HTTP/1.1 if not)
  local OSM_BASE_URL
  OSM_BASE_URL=$(echo "${URL}" | sed -E 's|^https?://([^/]+).*|\1|')
- if curl --http2 -s --max-time 5 "https://${OSM_BASE_URL}" > /dev/null 2>&1; then
+ local -a OSM_HTTP2_PROBE=(curl --http2 -s --max-time 5)
+ if declare -f __append_curl_download_headers > /dev/null 2>&1; then
+  __append_curl_download_headers OSM_HTTP2_PROBE
+ fi
+ if "${OSM_HTTP2_PROBE[@]}" "https://${OSM_BASE_URL}" > /dev/null 2>&1; then
   CURL_OPTS+=("--http2")
   __logd "Using HTTP/2 for OSM API"
  else
   __logd "HTTP/2 not available, using HTTP/1.1 with keep-alive"
  fi
 
- if [[ -n "${DOWNLOAD_USER_AGENT:-}" ]]; then
-  CURL_OPTS+=("-H" "User-Agent: ${DOWNLOAD_USER_AGENT}")
+ if declare -f __append_curl_download_headers > /dev/null 2>&1; then
+  __append_curl_download_headers CURL_OPTS
+ else
+  if [[ -n "${DOWNLOAD_USER_AGENT:-}" ]]; then
+   CURL_OPTS+=("-H" "User-Agent: ${DOWNLOAD_USER_AGENT}")
+  fi
+  if [[ -n "${DOWNLOAD_REFERER:-}" ]]; then
+   CURL_OPTS+=("-H" "Referer: ${DOWNLOAD_REFERER}")
+  fi
  fi
 
  # Conditional caching: use If-Modified-Since if we have a cached file
@@ -2708,8 +2765,12 @@ function __retry_geoserver_api() {
 
  while [[ ${RETRY_COUNT} -lt ${LOCAL_MAX_RETRIES} ]]; do
   if [[ "${METHOD}" == "POST" ]] && [[ -n "${DATA}" ]]; then
-   if curl -s --connect-timeout "${TIMEOUT}" --max-time "${TIMEOUT}" \
-    -X POST -d "${DATA}" -o "${OUTPUT_FILE}" "${URL}"; then
+   local -a GEO_CURL=(curl -s --connect-timeout "${TIMEOUT}" --max-time "${TIMEOUT}")
+   if declare -f __append_curl_download_headers > /dev/null 2>&1; then
+    __append_curl_download_headers GEO_CURL
+   fi
+   GEO_CURL+=(-X POST -d "${DATA}" -o "${OUTPUT_FILE}" "${URL}")
+   if "${GEO_CURL[@]}"; then
     if [[ -f "${OUTPUT_FILE}" ]] && [[ -s "${OUTPUT_FILE}" ]]; then
      __logd "GeoServer API call succeeded on attempt $((RETRY_COUNT + 1))"
      __log_finish
@@ -2721,8 +2782,12 @@ function __retry_geoserver_api() {
     __logw "GeoServer API call failed on attempt $((RETRY_COUNT + 1))"
    fi
   else
-   if curl -s --connect-timeout "${TIMEOUT}" --max-time "${TIMEOUT}" \
-    -o "${OUTPUT_FILE}" "${URL}"; then
+   local -a GEO_CURL_GET=(curl -s --connect-timeout "${TIMEOUT}" --max-time "${TIMEOUT}")
+   if declare -f __append_curl_download_headers > /dev/null 2>&1; then
+    __append_curl_download_headers GEO_CURL_GET
+   fi
+   GEO_CURL_GET+=(-o "${OUTPUT_FILE}" "${URL}")
+   if "${GEO_CURL_GET[@]}"; then
     if [[ -f "${OUTPUT_FILE}" ]] && [[ -s "${OUTPUT_FILE}" ]]; then
      __logd "GeoServer API call succeeded on attempt $((RETRY_COUNT + 1))"
      __log_finish

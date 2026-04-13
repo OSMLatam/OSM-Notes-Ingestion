@@ -18,8 +18,8 @@
 #   - systemd: See examples/systemd/osm-notes-ingestion-daemon.service (recommended)
 #
 # Author: Andres Gomez (AngocA)
-# Version: 2026-03-28
-VERSION="2026-03-28"
+# Version: 2026-04-11
+VERSION="2026-04-11"
 # 2026-03-15: After Planet --base exit 0, verify countries table exists before reporting success.
 
 # IMPORTANT: This daemon sources processAPINotes.sh to reuse all its functions
@@ -863,7 +863,12 @@ function __check_api_for_updates {
  local CHECK_URL="${OSM_API}/notes/search.xml?limit=1&closed=-1&sort=updated_at&from=${LAST_PROCESSED_TIMESTAMP}"
  local TEMP_CHECK_FILE="${TMP_DIR}/api_check_$$.xml"
 
- if curl -s --connect-timeout 10 --max-time 10 -H "User-Agent: ${DOWNLOAD_USER_AGENT}" -o "${TEMP_CHECK_FILE}" "${CHECK_URL}" 2> /dev/null; then
+ local -a DAEMON_API_CHECK_CURL=(curl -s --connect-timeout 10 --max-time 10)
+ if declare -f __append_curl_download_headers > /dev/null 2>&1; then
+  __append_curl_download_headers DAEMON_API_CHECK_CURL
+ fi
+ DAEMON_API_CHECK_CURL+=(-o "${TEMP_CHECK_FILE}" "${CHECK_URL}")
+ if "${DAEMON_API_CHECK_CURL[@]}" 2> /dev/null; then
   # Check if there are notes in the XML
   local NOTE_COUNT
   NOTE_COUNT=$(grep -c '<note ' "${TEMP_CHECK_FILE}" 2> /dev/null || echo "0")

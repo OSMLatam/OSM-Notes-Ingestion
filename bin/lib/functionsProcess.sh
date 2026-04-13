@@ -434,7 +434,9 @@ function __check_overpass_status() {
 
  __logd "Checking Overpass API status at ${STATUS_URL}..."
 
- if ! STATUS_OUTPUT=$(curl -s -H "User-Agent: ${DOWNLOAD_USER_AGENT}" "${STATUS_URL}" 2>&1); then
+ local -a STATUS_CURL=(curl -s)
+ __append_curl_download_headers STATUS_CURL
+ if ! STATUS_OUTPUT=$("${STATUS_CURL[@]}" "${STATUS_URL}" 2>&1); then
   __logw "Could not reach Overpass API status page, assuming available"
   __log_finish
   echo "0"
@@ -760,7 +762,10 @@ function __resolve_note_location_backup() {
   fi
  else
   # Fallback to direct curl if __retry_network_operation is not available
-  if curl -s --connect-timeout 30 --max-time 30 -H "User-Agent: ${DOWNLOAD_USER_AGENT}" -o "${DOWNLOADED_FILE}" "${DOWNLOAD_URL}" 2> /dev/null; then
+  local -a GH_CURL=(curl -s --connect-timeout 30 --max-time 30)
+  __append_curl_download_headers GH_CURL
+  GH_CURL+=(-o "${DOWNLOADED_FILE}" "${DOWNLOAD_URL}")
+  if "${GH_CURL[@]}" 2> /dev/null; then
    mkdir -p "$(dirname "${CSV_BACKUP_NOTE_LOCATION_COMPRESSED}")"
    mv "${DOWNLOADED_FILE}" "${CSV_BACKUP_NOTE_LOCATION_COMPRESSED}"
    __logi "Successfully downloaded note location backup from GitHub: ${DOWNLOAD_URL}"
@@ -2421,7 +2426,10 @@ EOF
  __logd "Checking Planet server access."
  # shellcheck disable=SC2154
  local PLANET_URL="${PLANET:-https://planet.openstreetmap.org}"
- if ! timeout 10 curl -s --max-time 10 -I "${PLANET_URL}/planet/notes/" > /dev/null 2>&1; then
+ local -a PLANET_CURL=(-s --max-time 10 -I)
+ __append_curl_download_headers PLANET_CURL
+ if ! timeout 10 curl "${PLANET_CURL[@]}" \
+  "${PLANET_URL}/planet/notes/" > /dev/null 2>&1; then
   __loge "ERROR: Cannot access Planet server at ${PLANET_URL}."
   __loge "Please check your internet connection and firewall settings."
   exit "${ERROR_INTERNET_ISSUE}"
@@ -2435,11 +2443,9 @@ EOF
  local TEMP_API_RESPONSE
  TEMP_API_RESPONSE=$(mktemp)
 
- # Download API versions response to check version (User-Agent per OSMF API policy)
+ # Download API versions response (User-Agent / Referer per OSMF API policy)
  local -a API_VERSIONS_CURL_OPTS=(-s --max-time 15)
- if [[ -n "${DOWNLOAD_USER_AGENT:-}" ]]; then
-  API_VERSIONS_CURL_OPTS+=(-H "User-Agent: ${DOWNLOAD_USER_AGENT}")
- fi
+ __append_curl_download_headers API_VERSIONS_CURL_OPTS
  if ! timeout 15 curl "${API_VERSIONS_CURL_OPTS[@]}" \
   "${API_VERSIONS_URL}" > "${TEMP_API_RESPONSE}" 2> /dev/null; then
   rm -f "${TEMP_API_RESPONSE}"
@@ -2484,9 +2490,11 @@ EOF
  local OVERPASS_URL="${OVERPASS_INTERPRETER:-https://overpass-api.de/api/interpreter}"
  # Use a minimal query to test Overpass accessibility
  local OVERPASS_TEST_QUERY="[out:json][timeout:5];node(1);out;"
- if ! timeout 15 curl -s --max-time 15 -X POST \
-  -H "Content-Type: application/x-www-form-urlencoded" \
-  -d "data=${OVERPASS_TEST_QUERY}" \
+ local -a OVERPASS_TEST_CURL=(-s --max-time 15 -X POST)
+ __append_curl_download_headers OVERPASS_TEST_CURL
+ OVERPASS_TEST_CURL+=(-H "Content-Type: application/x-www-form-urlencoded")
+ OVERPASS_TEST_CURL+=(-d "data=${OVERPASS_TEST_QUERY}")
+ if ! timeout 15 curl "${OVERPASS_TEST_CURL[@]}" \
   "${OVERPASS_URL}" > /dev/null 2>&1; then
   __loge "ERROR: Cannot access Overpass API at ${OVERPASS_URL}."
   __loge "Please check your internet connection and firewall settings."
@@ -3359,7 +3367,9 @@ function __downloadPlanetNotes {
  fi
 
  # Download MD5 file with retry logic
- local MD5_OPERATION="curl -s -H \"User-Agent: ${DOWNLOAD_USER_AGENT}\" -o ${PLANET_NOTES_FILE}.bz2.md5 ${PLANET}/notes/${PLANET_NOTES_NAME}.bz2.md5"
+ local MD5_HDRS
+ MD5_HDRS="$(__curl_download_headers_for_shell_string)"
+ local MD5_OPERATION="curl -s${MD5_HDRS} -o ${PLANET_NOTES_FILE}.bz2.md5 ${PLANET}/notes/${PLANET_NOTES_NAME}.bz2.md5"
  local MD5_CLEANUP="rm -f ${PLANET_NOTES_FILE}.bz2.md5 2>/dev/null || true"
 
  # shellcheck disable=SC2310
@@ -3921,8 +3931,10 @@ function __overpass_download_with_endpoints() {
   rm -f "${LOCAL_JSON_FILE}" "${LOCAL_OUTPUT_FILE}" 2> /dev/null || true
 
   local OP
-  __logd "Using User-Agent for Overpass: ${DOWNLOAD_USER_AGENT}"
-  OP="curl -s -H \"User-Agent: ${DOWNLOAD_USER_AGENT}\" -o ${LOCAL_JSON_FILE} --data-binary @${LOCAL_QUERY_FILE} ${ACTIVE_OVERPASS} 2> ${LOCAL_OUTPUT_FILE}"
+  local OVERPASS_HDRS
+  OVERPASS_HDRS="$(__curl_download_headers_for_shell_string)"
+  __logd "Overpass download uses User-Agent and Referer when configured"
+  OP="curl -s${OVERPASS_HDRS} -o ${LOCAL_JSON_FILE} --data-binary @${LOCAL_QUERY_FILE} ${ACTIVE_OVERPASS} 2> ${LOCAL_OUTPUT_FILE}"
   local CL="rm -f ${LOCAL_JSON_FILE} ${LOCAL_OUTPUT_FILE} 2>/dev/null || true"
   # shellcheck disable=SC2310
   # Intentional: check return value explicitly with if statement

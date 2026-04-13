@@ -147,9 +147,14 @@ teardown() {
  local TEMP_RESPONSE
  TEMP_RESPONSE=$(mktemp)
  local CURL_USER_AGENT="${DOWNLOAD_USER_AGENT:-OSM-Notes-Ingestion-ConnectivityTest/1.0}"
- 
+ local EXTRA_REFERER=()
+ if [[ -n "${DOWNLOAD_REFERER:-}" ]]; then
+  EXTRA_REFERER=(-H "Referer: ${DOWNLOAD_REFERER}")
+ fi
+
  run timeout 15 curl -s --max-time 15 \
   -H "User-Agent: ${CURL_USER_AGENT}" \
+  "${EXTRA_REFERER[@]}" \
   "https://api.openstreetmap.org/api/versions" > "${TEMP_RESPONSE}" 2>&1
 
  if [ "$status" -ne 0 ]; then

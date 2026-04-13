@@ -4,8 +4,8 @@
 # This file contains functions for processing API data.
 #
 # Author: Andres Gomez (AngocA)
-# Version: 2026-03-26
-VERSION="2026-03-26"
+# Version: 2026-04-11
+VERSION="2026-04-11"
 
 # Show help function
 function __show_help() {
@@ -216,9 +216,19 @@ function __resolve_notes_limit_from_capabilities() {
  CAPABILITIES_FILE=$(mktemp)
 
  # shellcheck disable=SC2154
- if curl -s --connect-timeout 10 --max-time 20 \
-  -H "User-Agent: ${DOWNLOAD_USER_AGENT}" \
-  -o "${CAPABILITIES_FILE}" "${CAPABILITIES_URL}" 2> /dev/null; then
+ local -a CAP_CURL=(curl -s --connect-timeout 10 --max-time 20)
+ if declare -f __append_curl_download_headers > /dev/null 2>&1; then
+  __append_curl_download_headers CAP_CURL
+ else
+  if [[ -n "${DOWNLOAD_USER_AGENT:-}" ]]; then
+   CAP_CURL+=(-H "User-Agent: ${DOWNLOAD_USER_AGENT}")
+  fi
+  if [[ -n "${DOWNLOAD_REFERER:-}" ]]; then
+   CAP_CURL+=(-H "Referer: ${DOWNLOAD_REFERER}")
+  fi
+ fi
+ CAP_CURL+=(-o "${CAPABILITIES_FILE}" "${CAPABILITIES_URL}")
+ if "${CAP_CURL[@]}" 2> /dev/null; then
   # shellcheck disable=SC2312
   MAX_QUERY_LIMIT=$(sed -n \
    's/.*<notes[^>]*maximum_query_limit="\([0-9][0-9]*\)".*/\1/p' \

@@ -6,7 +6,7 @@
 # Then edit etc/properties.sh with your database credentials.
 #
 # Author: Andres Gomez (AngocA)
-# Version: 2026-03-26
+# Version: 2026-04-11
 
 # Data directory for backups (noteLocation, countries, maritimes). Default: project root/data.
 # Set in etc/properties.sh for production so the service user does not need write access to the repo.
@@ -124,6 +124,13 @@ declare PROJECT_CONTACT_EMAIL="${PROJECT_CONTACT_EMAIL:-your-email@domain.com}"
 if [[ -z "${DOWNLOAD_USER_AGENT:-}" ]]; then
  # Do not break lines; keep UA in one line for header correctness
  DOWNLOAD_USER_AGENT="${PROJECT_NAME}/${PROJECT_VERSION} (+${PROJECT_URL}; contact: ${PROJECT_CONTACT_EMAIL})"
+fi
+
+# Optional HTTP Referer for outbound HTTP(S) requests. OSMF API policy suggests a
+# valid Referer when known; we default to the project URL. To omit the header,
+# set explicitly to empty in properties.sh: export DOWNLOAD_REFERER=
+if [[ ! -v DOWNLOAD_REFERER ]]; then
+ DOWNLOAD_REFERER="${PROJECT_URL}"
 fi
 
 # Processing configuration.
