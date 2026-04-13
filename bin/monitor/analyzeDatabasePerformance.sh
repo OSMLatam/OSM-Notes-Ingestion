@@ -14,7 +14,7 @@
 # 255) General error
 #
 # Author: Andres Gomez (AngocA)
-# Version: 2026-03-27
+# Version: 2026-04-12
 
 set -euo pipefail
 
@@ -262,7 +262,9 @@ __run_analysis_script() {
   cat "${SCRIPT_FILE}"
  } > "${TEMP_SCRIPT}"
 
- if timeout "${TIMEOUT_SECONDS}" PGAPPNAME="${PGAPPNAME}" psql -d "${DBNAME}" \
+ # timeout expects one COMMAND; without env, PGAPPNAME=... is executed as a
+ # binary and fails with exit 127 (command not found).
+ if timeout "${TIMEOUT_SECONDS}" env PGAPPNAME="${PGAPPNAME}" psql -d "${DBNAME}" \
   -f "${TEMP_SCRIPT}" > "${OUTPUT_FILE}" 2>&1; then
   rm -f "${TEMP_SCRIPT}"
   local END_TIME
