@@ -4,7 +4,7 @@
 # Tests both full cleanup and partition-only cleanup functionality
 #
 # Author: Andres Gomez (AngocA)
-# Version: 2026-04-06
+# Version: 2026-04-17
 
 # Load test helper
 load ../../test_helper.bash

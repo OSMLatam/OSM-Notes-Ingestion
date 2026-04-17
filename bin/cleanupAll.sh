@@ -11,8 +11,8 @@
 # 255) General error
 #
 # Author: Andres Gomez (AngocA)
-# Version: 2026-04-06
-VERSION="2026-04-06"
+# Version: 2026-04-17
+VERSION="2026-04-17"
 
 set -euo pipefail
 # shellcheck disable=SC2310,SC2312
@@ -510,6 +510,24 @@ function __verify_cleanup_success() {
   "properties"
   "logs"
   "license"
+  "schema_version"
+  "user_identity_history"
+  "user_identity_conflicts"
+  "missing_comments_history"
+  "missing_text_comments_history"
+  "temp_diff_notes_id"
+  "temp_diff_comments_id"
+  "temp_diff_notes"
+  "temp_diff_text_comments_id"
+  "temp_diff_text_comments"
+  "temp_diff_note_comments"
+  "temp_notes_in_main_not_in_check"
+  "import"
+  "backup_note_locations"
+  "backup_countries"
+  "notes_sync_no_duplicates"
+  "note_comments_sync_no_duplicates"
+  "gdpr_audit_log"
  )
 
  local AFTER_TABLES="${AFTER_DIR}/tables.txt"
@@ -808,6 +826,7 @@ function __show_help() {
  echo "Full cleanup will:"
  echo "  1. Check if the database exists"
  echo "  2. Remove base components (tables, functions, procedures)"
+ echo "     including schema_version, user_identity_*, monitor temps, import"
  echo "  3. Clean up temporary files"
  echo ""
  echo "Partition-only cleanup will:"
@@ -869,8 +888,21 @@ function main() {
  fi
  local TARGET_DB="${DBNAME}"
 
- # Validate schema contract compatibility before cleanup operations.
- __assert_schema_compatible
+ # Schema check requires schema_version; skip if already cleaned or fresh DB
+ # so cleanup can be re-run idempotently.
+ local PSQL_SCHEMA_CHECK="psql"
+ if [[ -n "${DB_USER:-}" ]]; then
+  PSQL_SCHEMA_CHECK="${PSQL_SCHEMA_CHECK} -U ${DB_USER}"
+ fi
+ local SCHEMA_VERSION_TABLE_EXISTS=""
+ SCHEMA_VERSION_TABLE_EXISTS=$(${PSQL_SCHEMA_CHECK} -d "${TARGET_DB}" -Atq -c \
+  "SELECT EXISTS (SELECT 1 FROM information_schema.tables WHERE table_schema = 'public' AND table_name = 'schema_version');" \
+  2> /dev/null | tr -d '[:space:]' || echo "f")
+ if [[ "${SCHEMA_VERSION_TABLE_EXISTS}" == "t" ]]; then
+  __assert_schema_compatible
+ else
+  __logw "Table schema_version not found; skipping schema contract check"
+ fi
 
  # Prevent concurrent executions using flock
  __logi "Checking for concurrent executions..."
