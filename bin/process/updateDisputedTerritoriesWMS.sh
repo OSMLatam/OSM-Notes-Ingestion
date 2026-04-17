@@ -12,9 +12,9 @@
 # Error codes: 1 help, 241 missing tool, 242 invalid arg, 252 validation, 255 general.
 #
 # Author: Andres Gomez (AngocA)
-# Version: 2026-04-07
+# Version: 2026-04-17
 
-VERSION="2026-04-07"
+VERSION="2026-04-17"
 
 set -u
 set -e
@@ -309,7 +309,15 @@ function main() {
   esac
  done
 
- __checkPrereqsCommands
+ # Dry-run only needs jq to expand JSON; skip GDAL/psql stack required for refresh.
+ if [[ "${DO_DRY}" == "true" ]]; then
+  if ! command -v jq > /dev/null 2>&1; then
+   __loge "ERROR: jq is required for ${BASENAME} --dry-run."
+   exit "${ERROR_MISSING_LIBRARY}"
+  fi
+ else
+  __checkPrereqsCommands
+ fi
  __validate_disputed_wms_json_file
 
  if [[ "${DO_DRY}" == "true" ]]; then
