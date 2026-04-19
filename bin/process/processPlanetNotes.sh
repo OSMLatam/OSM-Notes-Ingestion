@@ -44,8 +44,8 @@
 # For contributing: shellcheck -x -o all processPlanetNotes.sh && shfmt -w -i 1 -sr -bn processPlanetNotes.sh
 #
 # Author: Andres Gomez (AngocA)
-# Version: 2026-03-28
-VERSION="2026-03-28"
+# Version: 2026-04-19
+VERSION="2026-04-19"
 
 #set -xv
 # Fails when a variable is not initialized.
@@ -3255,6 +3255,34 @@ function __processGeographicDataSyncMode {
  return 0
 }
 
+##
+# Records successful completion of Planet --base workflow in public.properties.
+# Downstream jobs can verify readiness with:
+#   SELECT value FROM properties WHERE key = 'base_load_complete';
+# The row is removed when base tables are dropped; it is (re)written only after a
+# full successful --base run (notes load, geographic data, location assignment,
+# procedures, analyze/vacuum).
+#
+# Parameters:
+#   None (uses DBNAME, PGAPPNAME)
+#
+# Returns:
+#   0: Success - property written
+#   Non-zero: psql failed
+#
+function __record_base_load_complete {
+ __log_start
+ __logi "Recording base load completion in public.properties (base_load_complete)"
+ local BASE_LOAD_SQL
+ BASE_LOAD_SQL="INSERT INTO properties (key, value) VALUES ("
+ BASE_LOAD_SQL="${BASE_LOAD_SQL}'base_load_complete', 'true') "
+ BASE_LOAD_SQL="${BASE_LOAD_SQL}ON CONFLICT (key) DO UPDATE SET value = EXCLUDED.value"
+ PGAPPNAME="${PGAPPNAME}" psql -d "${DBNAME}" -v ON_ERROR_STOP=1 --pset pager=off \
+  -c "${BASE_LOAD_SQL}"
+ __logi "Base load completion recorded successfully."
+ __log_finish
+}
+
 ######
 # MAIN
 
@@ -3318,6 +3346,10 @@ function main() {
 
  __cleanNotesFiles  # base & sync
  __analyzeAndVacuum # base & sync
+
+ if [[ "${PROCESS_TYPE}" == "--base" ]]; then
+  __record_base_load_complete
+ fi
 
  rm -f "${LOCK}"
  __logw "Ending process."

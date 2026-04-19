@@ -1,7 +1,7 @@
 -- Create base tables and some indexes.
 --
 -- Author: Andres Gomez (AngocA)
--- Version: 2026-03-25
+-- Version: 2026-04-19
 
 CREATE TABLE IF NOT EXISTS users (
  user_id INTEGER NOT NULL PRIMARY KEY,
@@ -149,7 +149,8 @@ CREATE TABLE IF NOT EXISTS properties (
  value VARCHAR(32),
  updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
 );
-COMMENT ON TABLE properties IS 'Properties table for base load';
+COMMENT ON TABLE properties IS
+  'Key-value store; ingestion sets base_load_complete=true after full --base load';
 COMMENT ON COLUMN properties.key IS 'Property name';
 COMMENT ON COLUMN properties.value IS 'Property value';
 

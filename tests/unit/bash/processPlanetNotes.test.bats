@@ -2,7 +2,7 @@
 
 # Unit tests for processPlanetNotes.sh
 # Author: Andres Gomez (AngocA)
-# Version: 2025-10-25
+# Version: 2026-04-19
 
 load "$(dirname "$BATS_TEST_FILENAME")/../../test_helper.bash"
 
@@ -53,6 +53,15 @@ load "$(dirname "$BATS_TEST_FILENAME")/../../test_helper.bash"
 @test "XML schema files should exist" {
  # Check if required XML schema files exist
  [ -f "${TEST_BASE_DIR}/xsd/OSM-notes-planet-schema.xsd" ]
+}
+
+@test "base mode records base_load_complete in public.properties" {
+ run grep -q "__record_base_load_complete" \
+  "${TEST_BASE_DIR}/bin/process/processPlanetNotes.sh"
+ [ "$status" -eq 0 ]
+ run grep -q "'base_load_complete'" \
+  "${TEST_BASE_DIR}/bin/process/processPlanetNotes.sh"
+ [ "$status" -eq 0 ]
 }
 
 @test "test database should be created for processPlanetNotes" {
