@@ -2,7 +2,7 @@
 title: "Complete Description of processPlanetNotes.sh"
 description: "The `processPlanetNotes.sh` script is the central component of the OpenStreetMap notes processing"
 version: "1.0.0"
-last_updated: "2026-01-25"
+last_updated: "2026-04-19"
 author: "AngocA"
 tags:
   - "processing"
@@ -17,6 +17,9 @@ status: "active"
 
 > **Note:** For a general system overview, see [Documentation.md](./Documentation.md). For project
 > motivation and background, see [Rationale.md](./Rationale.md).
+>
+> **Operators:** To track long `--base` runs (logs + SQL + completion flag), see
+> [Base_Load_Progress_Monitoring.md](./Base_Load_Progress_Monitoring.md).
 
 ## General Purpose
 

@@ -2,7 +2,7 @@
 title: "OSM Notes Ingestion - System Documentation"
 description: "This document provides comprehensive technical documentation for the OSM-Notes-Ingestion system,"
 version: "1.0.0"
-last_updated: "2026-04-06"
+last_updated: "2026-04-19"
 author: "AngocA"
 tags:
   - "documentation"
@@ -798,6 +798,11 @@ fi
 #### Processing Planet Notes (Historical Data)
 
 The `processPlanetNotes.sh` script accepts a `--base` parameter for full initialization:
+
+> **Operations:** Long base loads can take hours. See
+> [Base_Load_Progress_Monitoring.md](./Base_Load_Progress_Monitoring.md) for log
+> locations, SQL snapshots (notes/comments/countries/assignment), and the
+> `base_load_complete` property.
 
 ```bash
 # Sync mode (incremental update from Planet)

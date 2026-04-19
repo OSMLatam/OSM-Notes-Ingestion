@@ -2,7 +2,7 @@
 title: "OSM-Notes-Ingestion Documentation"
 description: "Comprehensive documentation index for OSM-Notes-Ingestion system"
 version: "1.0.0"
-last_updated: "2026-01-25"
+last_updated: "2026-04-19"
 author: "AngocA"
 tags:
   - "documentation"
@@ -56,6 +56,8 @@ For detailed navigation paths by role, see
 
 - **`Process_API.md`**: API processing documentation and incremental synchronization
 - **`Process_Planet.md`**: Planet file processing documentation and historical data handling
+- **`Base_Load_Progress_Monitoring.md`**: Operator runbook for long `processPlanetNotes.sh --base`
+  steps (logs, SQL counts, completion flag)
 
 ### Spatial Processing
 
