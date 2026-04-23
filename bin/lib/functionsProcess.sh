@@ -547,6 +547,10 @@ fi
 if ! declare -p POSTGRES_23_CREATE_PROC_INSERT_NOTE_COMMENT > /dev/null 2>&1; then
  declare -r POSTGRES_23_CREATE_PROC_INSERT_NOTE_COMMENT="${SCRIPT_BASE_DIRECTORY}/sql/functionsProcess_22_createProcedure_insertNoteComment.sql"
 fi
+# OSM durable user identity (after base tables and constraints; before procedures)
+if ! declare -p POSTGRES_22_CREATE_OSM_USER_IDENTITY > /dev/null 2>&1; then
+ declare -r POSTGRES_22_CREATE_OSM_USER_IDENTITY="${SCRIPT_BASE_DIRECTORY}/sql/process/osm_user_identity_23_createFunctionsAndViews.sql"
+fi
 if ! declare -p POSTGRES_31_ORGANIZE_AREAS > /dev/null 2>&1; then
  declare -r POSTGRES_31_ORGANIZE_AREAS="${SCRIPT_BASE_DIRECTORY}/sql/functionsProcess_30_organizeAreas_2DGrid.sql"
 fi
@@ -3665,6 +3669,20 @@ function __createFunctionToGetCountry {
 function __createProcedures {
  __log_start
  __logd "Creating procedures."
+
+ if [[ -z "${POSTGRES_22_CREATE_OSM_USER_IDENTITY:-}" ]]; then
+  __loge "ERROR: POSTGRES_22_CREATE_OSM_USER_IDENTITY variable is not defined."
+  # shellcheck disable=SC2154
+  exit "${ERROR_MISSING_LIBRARY}"
+ fi
+ if [[ ! -f "${POSTGRES_22_CREATE_OSM_USER_IDENTITY}" ]]; then
+  __loge "ERROR: SQL file not found: ${POSTGRES_22_CREATE_OSM_USER_IDENTITY}"
+  # shellcheck disable=SC2154
+  exit "${ERROR_MISSING_LIBRARY}"
+ fi
+
+ PGAPPNAME="${PGAPPNAME}" psql -d "${DBNAME}" -v ON_ERROR_STOP=1 \
+  -f "${POSTGRES_22_CREATE_OSM_USER_IDENTITY}"
 
  # Validate that POSTGRES_22_CREATE_PROC_INSERT_NOTE is defined
  if [[ -z "${POSTGRES_22_CREATE_PROC_INSERT_NOTE:-}" ]]; then

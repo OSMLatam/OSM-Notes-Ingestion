@@ -1,7 +1,7 @@
 -- Procedure to insert a note comment.
 --
 -- Author: Andres Gomez (AngocA)
--- Version: 2026-03-25
+-- Version: 2026-04-22
 
 CREATE OR REPLACE PROCEDURE insert_note_comment(
   m_note_id INTEGER,
@@ -147,6 +147,23 @@ AS $proc$
        AND u2.user_id <> users.user_id
     );
    END IF;
+  END IF;
+
+  -- Durable identity (osm_user_identity) after users/history update.
+  IF (m_id_user IS NOT NULL) THEN
+   BEGIN
+    PERFORM osm_upsert_user_identity(
+     m_id_user,
+     m_username,
+     'insert_note_comment',
+     m_created_at
+    );
+   EXCEPTION
+    WHEN undefined_function THEN
+     NULL;
+    WHEN undefined_table THEN
+     NULL;
+   END;
   END IF;
 
   -- Insert comment with exception handling for unique constraint violations
