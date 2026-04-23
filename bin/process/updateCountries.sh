@@ -148,7 +148,7 @@ __init_directories "${BASENAME}"
 
 # Load processPlanetFunctions.sh to get SQL file variables
 # shellcheck disable=SC1091
-if [[ -f "${SCRIPT_BASE_DIRECTORY}/bin/processPlanetFunctions.sh" ]]; then
+if [[ -f "${SCRIPT_BASE_DIRECTORY}/bin/lib/processPlanetFunctions.sh" ]]; then
  source "${SCRIPT_BASE_DIRECTORY}/bin/lib/processPlanetFunctions.sh"
 fi
 
@@ -159,11 +159,8 @@ fi
 
 # Location of the common functions.
 declare -r QUERY_FILE="${TMP_DIR}/query"
-# Note: UPDATE_COUNTRIES_FILE and UPDATE_MARITIMES_FILE are reserved for future use
-# shellcheck disable=SC2034
-declare -r UPDATE_COUNTRIES_FILE="${TMP_DIR}/countries"
-# shellcheck disable=SC2034
-declare -r UPDATE_MARITIMES_FILE="${TMP_DIR}/maritimes"
+# COUNTRIES_FILE and MARITIMES_FILE (${TMP_DIR}/countries, ${TMP_DIR}/maritimes) are declared in
+# processPlanetFunctions.sh when functionsProcess.sh is sourced below.
 
 # Control variables for functionsProcess.sh
 export ONLY_EXECUTION="no"
