@@ -30,8 +30,8 @@
 # * shfmt -w -i 1 -sr -bn notesCheckVerifier.sh
 #
 # Author: Andres Gomez (AngocA)
-# Version: 2026-04-02
-VERSION="2026-04-02"
+# Version: 2026-04-29
+VERSION="2026-04-29"
 
 #set -xv
 # Fails when a variable is not initialized.
@@ -86,6 +86,13 @@ source "${SCRIPT_BASE_DIRECTORY}/bin/lib/pathConfigurationFunctions.sh"
 # Don't make it readonly to avoid conflicts when sourcing other scripts
 if [[ -z "${TMP_DIR:-}" ]]; then
  __init_directories "${BASENAME}"
+else
+ # Cron (or other callers) may set TMP_DIR without pre-creating the path.
+ mkdir -p "${TMP_DIR}" || {
+  printf '%s\n' \
+   "ERROR: Failed to create temporary directory: ${TMP_DIR}" >&2
+  exit 241
+ }
 fi
 # Log file for output (use LOG_FILENAME from pathConfigurationFunctions)
 declare LOG_FILE_NAME
