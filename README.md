@@ -145,7 +145,8 @@ For shared documentation of the complete ecosystem, see:
 
 - **[OSM Notes Ecosystem](https://github.com/OSM-Notes/OSM-Notes)** - Ecosystem landing page
 - **[Global Glossary](https://github.com/OSM-Notes/OSM-Notes-Common/blob/main/docs/Glossary.md)** - Terms and definitions
-- **[Complete Installation Guide](https://github.com/OSM-Notes/OSM-Notes-Common/blob/main/docs/Installation.md)** - Step-by-step installation of all projects
+- **[Ecosystem installation index](https://github.com/OSM-Notes/OSM-Notes-Common/blob/main/docs/Installation.md)** -
+  Suggested dependency order and links to each project's authoritative install docs
 - **[End-to-End Data Flow](https://github.com/OSM-Notes/OSM-Notes-Common/blob/main/docs/Data_Flow.md)** - Complete data flow
 - **[Decision Guide](https://github.com/OSM-Notes/OSM-Notes-Common/blob/main/docs/Decision_Guide.md)** - Which project do I need?
 
