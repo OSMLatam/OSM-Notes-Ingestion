@@ -178,6 +178,10 @@ sudo -u postgres psql -d notes -c "SELECT PostGIS_version();"
 sudo -u postgres psql -d notes -c "\dx"  # List installed extensions
 ```
 
+### 4. Optional: WMS disputed territories table
+
+If you use **[OSM-Notes-WMS](https://github.com/OSM-Notes/OSM-Notes-WMS)** (same database), this repo can maintain the PostGIS layer **`disputed_territories_wms`**. After **`countries`** is loaded (**`bin/process/updateCountries.sh`**, typically with **`--base`** on a fresh system), run **`bin/process/updateDisputedTerritoriesWMS.sh`**. The script **creates and seeds that table automatically** when it does not exist. Optional **`--init`** re-applies the SQL scripts every time (safe: **`CREATE IF NOT EXISTS`** and **`ON CONFLICT DO NOTHING`** on seed). See **`docs/WMS_Disputed_Territories_Layer.md`**.
+
 ---
 
 ## Project Installation

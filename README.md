@@ -293,7 +293,10 @@ For detailed installation instructions, see:
 
 However, other projects depend on this one:
 - **OSM-Notes-Analytics** requires this project (reads from base tables)
-- **OSM-Notes-WMS** requires this project (uses same database)
+- **OSM-Notes-WMS** requires this project (same database); optional
+  **`disputed_territories_wms`** layer via **`bin/process/updateDisputedTerritoriesWMS.sh`**
+  after **`countries`** exists (see step 4 under **Database Setup** in
+  **`docs/Installation_Dependencies.md`**)
 - **OSM-Notes-Monitoring** monitors this project
 
 ## Shared Functions (Git Submodule)

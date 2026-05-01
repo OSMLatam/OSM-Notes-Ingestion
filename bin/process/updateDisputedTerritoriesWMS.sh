@@ -2,6 +2,8 @@
 
 # Refresh disputed_territories_wms geometries from JSON hints and countries table.
 # Standalone WMS layer; not used by note ingestion. Schedule after updateCountries.
+# If the table is missing, create + seed run automatically (same as --init SQL); use
+# --init to force re-apply those scripts on every run (idempotent).
 #
 # Reads data/disputed_territories_wms_names.json (or DISPUTED_WMS_JSON_OVERRIDE):
 #   - geometry_ewkt: optional hardcoded EWKT (SRID=4326;...). Overrides pair/bbox.
@@ -12,9 +14,9 @@
 # Error codes: 1 help, 241 missing tool, 242 invalid arg, 252 validation, 255 general.
 #
 # Author: Andres Gomez (AngocA)
-# Version: 2026-04-17
+# Version: 2026-05-01
 
-VERSION="2026-04-17"
+VERSION="2026-05-01"
 
 set -u
 set -e
@@ -56,8 +58,8 @@ if [[ "${1:-}" == "-h" ]] || [[ "${1:-}" == "--help" ]]; then
  echo "Refreshes disputed_territories_wms.geom from JSON hints and countries."
  echo
  echo "Usage:"
- echo "  ${BASENAME}.sh                 # Compute geometries (default)"
- echo "  ${BASENAME}.sh --init          # Apply create + seed SQL, then compute"
+ echo "  ${BASENAME}.sh                 # Compute geometries (auto create+seed if table missing)"
+ echo "  ${BASENAME}.sh --init          # Always apply create + seed SQL, then compute (idempotent)"
  echo "  ${BASENAME}.sh --dry-run       # Print generated SQL only"
  echo "  ${BASENAME}.sh --help          # This help"
  echo
@@ -224,18 +226,49 @@ function __validate_disputed_wms_json_file() {
 }
 
 ##
-# Parameters: none.
+# Parameters:
+#   $1 - table name (public schema).
 ##
-function __assert_table_exists() {
+function __table_exists_public() {
  local TBL="${1:?}"
  local EXISTS
  EXISTS=$(PGAPPNAME="${PGAPPNAME}" psql -U "${DB_USER}" -d "${DBNAME}" -Atq -c \
   "SELECT EXISTS (SELECT 1 FROM information_schema.tables WHERE table_schema = 'public' AND table_name = '${TBL}');" \
   2> /dev/null || echo "f")
- if [[ "${EXISTS}" != "t" ]]; then
-  __loge "ERROR: Table '${TBL}' does not exist. Run: ${BASENAME}.sh --init"
-  exit "${ERROR_DATA_VALIDATION:-252}"
+ [[ "${EXISTS}" == "t" ]]
+}
+
+##
+# Parameters:
+#   $1 - table name.
+#   $2 - hint shown when missing (human-readable remediation).
+##
+function __assert_table_exists() {
+ local TBL="${1:?}"
+ local HINT="${2:?}"
+ local EXISTS_RC
+ __table_exists_public "${TBL}"
+ EXISTS_RC=$?
+ if [[ "${EXISTS_RC}" -eq 0 ]]; then
+  return 0
  fi
+ __loge "ERROR: Table '${TBL}' does not exist. ${HINT}"
+ exit "${ERROR_DATA_VALIDATION:-252}"
+}
+
+##
+# Creates and seeds disputed_territories_wms when absent (first cron run / new DB).
+# Parameters: none.
+##
+function __ensure_disputed_wms_schema() {
+ local EXISTS_RC
+ __table_exists_public "disputed_territories_wms"
+ EXISTS_RC=$?
+ if [[ "${EXISTS_RC}" -eq 0 ]]; then
+  return 0
+ fi
+ __logi "Table disputed_territories_wms not found; applying create + seed (first run)"
+ __apply_schema_sql
 }
 
 ##
@@ -262,8 +295,11 @@ function __apply_schema_sql() {
 function __run_geometry_refresh() {
  local GEN_SQL="${TMP_DIR}/${BASENAME}_geometry_updates.sql"
  __assert_schema_compatible
- __assert_table_exists "disputed_territories_wms"
- __assert_table_exists "countries"
+ __ensure_disputed_wms_schema
+ __assert_table_exists "disputed_territories_wms" \
+  "Schema apply failed or table was dropped; run ${BASENAME}.sh --init manually."
+ __assert_table_exists "countries" \
+  "Load boundaries with updateCountries.sh (e.g. --base on an empty database)."
 
  : > "${GEN_SQL}"
  __write_geometry_updates_sql "${GEN_SQL}" "${DISPUTED_WMS_JSON}"

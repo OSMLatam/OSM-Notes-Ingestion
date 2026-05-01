@@ -43,7 +43,7 @@ in sync for the same `kind` + `name`):
      **`unclaimed_territory`** plus **`bbox`**.
 3. Mirror the new rows in **`disputed_territories_wms_02_seed_reference_names.sql`**
    (same names; use **`ON CONFLICT (kind, name) DO NOTHING`**).
-4. Run **`updateDisputedTerritoriesWMS.sh`** (after **`--init`** on first   deploy) so rows with hints get **`geom`**.
+4. Run **`updateDisputedTerritoriesWMS.sh`** so rows with hints get **`geom`** (first run creates/seeds the table if missing); use **`--init`** to force re-apply create/seed SQL.
 
 Do **not** commit private paths like `file:///.../Descargas/fronteras.txt`; keep
 the repo’s source of truth as **`disputed_territories_wms_names.json`**.
@@ -60,8 +60,7 @@ the repo’s source of truth as **`disputed_territories_wms_names.json`**.
 
 ## Operations
 
-- **First deploy:**  `bin/process/updateDisputedTerritoriesWMS.sh --init`  
-  Then use normal refresh (no `--init`) in cron.
+- **First deploy:** After **`countries`** exists, run **`bin/process/updateDisputedTerritoriesWMS.sh`**; it applies create + seed automatically if **`disputed_territories_wms`** is missing. **`--init`** optionally forces those SQL scripts every run (idempotent).
 
 - **Periodic refresh:** After `updateCountries.sh` (same DB), so intersections use
   current boundaries. See `examples/crontab-setup.example`.
