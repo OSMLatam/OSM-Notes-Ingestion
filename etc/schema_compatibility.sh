@@ -9,11 +9,11 @@
 # See also OSM-Notes-Analytics/sql/dwh/ETL_00_ingestion_user_identity_contract.sql
 #
 # Author: Andres Gomez (AngocA)
-# Version: 2026-04-23
+# Version: 2026-05-01
 
 # Sets schema compatibility variables for a consumer.
 # Parameters:
-#  $1: consumer id (ingestion, api, wms, analytics, monitoring)
+#  $1: consumer id (ingestion, api, wms, analytics, monitoring, disputed_wms)
 function __set_schema_contract_range() {
  local CONSUMER="${1:-${SCHEMA_CONSUMER:-ingestion}}"
 
@@ -22,6 +22,13 @@ function __set_schema_contract_range() {
   export SCHEMA_COMPONENT="${SCHEMA_COMPONENT:-core}"
   export EXPECTED_SCHEMA_MIN="${EXPECTED_SCHEMA_MIN:-1.2.0}"
   export EXPECTED_SCHEMA_MAX="${EXPECTED_SCHEMA_MAX:-1.2.x}"
+  ;;
+ disputed_wms)
+  # Standalone disputed_territories_wms refresh: uses countries + WMS tables only
+  # (not osm_user_*). Allows core 1.1.x deployments until full 1.2.0 migration.
+  export SCHEMA_COMPONENT="${SCHEMA_COMPONENT:-core}"
+  export EXPECTED_SCHEMA_MIN="${EXPECTED_SCHEMA_MIN:-1.1.0}"
+  export EXPECTED_SCHEMA_MAX="${EXPECTED_SCHEMA_MAX:-}"
   ;;
  api)
   export SCHEMA_COMPONENT="${SCHEMA_COMPONENT:-core}"

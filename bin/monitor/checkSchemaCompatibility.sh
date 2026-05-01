@@ -13,8 +13,8 @@
 # 255) General error
 #
 # Author: Andres Gomez (AngocA)
-# Version: 2026-03-27
-VERSION="2026-03-27"
+# Version: 2026-05-01
+VERSION="2026-05-01"
 
 set -euo pipefail
 set -E
@@ -44,7 +44,8 @@ Usage:
   $0 [OPTIONS]
 
 Options:
-  --consumer VALUE   Consumer to validate: ingestion, api, wms, analytics, monitoring, all.
+  --consumer VALUE   Consumer to validate: ingestion, api, wms, analytics,
+                     monitoring, disputed_wms, all.
                      Default: all
   --db VALUE         Database name. Default: notes
   --verbose          Enable debug logs
@@ -159,7 +160,14 @@ function main() {
 
  local EXIT_CODE=0
  local CONSUMER
- local -a CONSUMERS=("ingestion" "api" "wms" "analytics" "monitoring")
+ local -a CONSUMERS=(
+  "ingestion"
+  "api"
+  "wms"
+  "analytics"
+  "monitoring"
+  "disputed_wms"
+ )
  for CONSUMER in "${CONSUMERS[@]}"; do
   if [[ "${CONSUMER_FILTER}" != "all" ]] && [[ "${CONSUMER}" != "${CONSUMER_FILTER}" ]]; then
    continue

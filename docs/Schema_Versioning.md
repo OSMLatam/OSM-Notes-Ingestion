@@ -18,7 +18,10 @@ Two related but **independent** version lines exist:
 - **Where:** `schema_version` table, `etc/schema_compatibility.sh`, and
   bootstrap/migration SQL.
 - **Purpose:** Downstream services (API, WMS, Analytics, Monitoring) declare
-  which contract range they support.
+  which contract range they support. The auxiliary consumer **`disputed_wms`**
+  (used by **`bin/process/updateDisputedTerritoriesWMS.sh`**) expects
+  **`schema_version.core >= 1.1.0`** with no upper bound: it only needs
+  **`countries`** and **`disputed_territories_wms`**, not **`osm_user_*`**.
 
 ### Project release
 

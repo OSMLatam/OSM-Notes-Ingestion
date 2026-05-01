@@ -3,7 +3,7 @@
 # Validates consumer schema contracts against the target schema version.
 #
 # Author: Andres Gomez (AngocA)
-# Version: 2026-03-27
+# Version: 2026-05-01
 
 set -euo pipefail
 
@@ -54,7 +54,7 @@ function main() {
 
  local EXIT_CODE=0
  local CONSUMER
- for CONSUMER in ingestion api wms analytics monitoring; do
+ for CONSUMER in ingestion api wms analytics monitoring disputed_wms; do
   local VALIDATION_EXIT_CODE=0
   # shellcheck disable=SC2310
   __validate_schema_contract_target "${CONSUMER}" "${TARGET_VERSION}" \

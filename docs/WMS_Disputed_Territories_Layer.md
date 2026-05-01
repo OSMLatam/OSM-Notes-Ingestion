@@ -65,6 +65,13 @@ the repo’s source of truth as **`disputed_territories_wms_names.json`**.
 - **Periodic refresh:** After `updateCountries.sh` (same DB), so intersections use
   current boundaries. See `examples/crontab-setup.example`.
 
+- **Schema guard:** Default **`SCHEMA_CONSUMER=disputed_wms`** requires
+  **`schema_version.core >= 1.1.0`** (this job only uses **`countries`** and the
+  WMS table). Full ingestion expects **`1.2.0+`**; upgrade the core schema when
+  you migrate note processing (`docs/Schema_Versioning.md`). To enforce the
+  ingestion contract here:  
+  `SCHEMA_CONSUMER=ingestion bin/process/updateDisputedTerritoriesWMS.sh`
+
 - **Dry run:**  
   `bin/process/updateDisputedTerritoriesWMS.sh --dry-run`  
   prints generated SQL only.

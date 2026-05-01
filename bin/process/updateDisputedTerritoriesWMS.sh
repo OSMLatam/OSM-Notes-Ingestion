@@ -24,7 +24,9 @@ set -o pipefail
 set -E
 
 declare LOG_LEVEL="${LOG_LEVEL:-ERROR}"
-declare SCHEMA_CONSUMER="${SCHEMA_CONSUMER:-ingestion}"
+# Narrow contract: countries + WMS layer only (see disputed_wms in
+# etc/schema_compatibility.sh). Use SCHEMA_CONSUMER=ingestion if you require 1.2.0+.
+declare SCHEMA_CONSUMER="${SCHEMA_CONSUMER:-disputed_wms}"
 
 if [[ -z "${SCRIPT_BASE_DIRECTORY:-}" ]]; then
  declare SCRIPT_BASE_DIRECTORY
