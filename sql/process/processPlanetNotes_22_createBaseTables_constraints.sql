@@ -1,7 +1,7 @@
 -- Create constraints in base tables.
 --
 -- Author: Andres Gomez (AngocA)
--- Version: 2026-03-25
+-- Version: 2026-04-23
 
 -- Users table already has PRIMARY KEY defined in CREATE TABLE
 -- ALTER TABLE users
@@ -169,3 +169,30 @@ CREATE INDEX IF NOT EXISTS user_identity_conflicts_username_idx
  (username, detected_at DESC);
 COMMENT ON INDEX user_identity_conflicts_username_idx IS
   'Lookup conflicts by username with recent events first';
+
+-- Durable OSM user identity: at most one open link per user_id; reverse by identity
+CREATE UNIQUE INDEX IF NOT EXISTS osm_user_id_link_one_current
+ ON osm_user_id_link (user_id)
+ WHERE (valid_to IS NULL);
+COMMENT ON INDEX osm_user_id_link_one_current IS
+  'Each OSM user_id has at most one current identity link';
+
+CREATE INDEX IF NOT EXISTS osm_user_id_link_by_identity
+ ON osm_user_id_link (identity_id);
+COMMENT ON INDEX osm_user_id_link_by_identity IS
+  'List user_ids for an identity (merge history)';
+
+CREATE UNIQUE INDEX IF NOT EXISTS osm_identity_suggestion_pair_uniq
+ ON osm_identity_suggestion (
+  identity_id_low,
+  identity_id_high,
+  reason,
+  source_process
+);
+COMMENT ON INDEX osm_identity_suggestion_pair_uniq IS
+  'Deduplicate repeated suggestion signals';
+
+CREATE INDEX IF NOT EXISTS osm_lifecycle_by_identity
+ ON osm_identity_lifecycle_event (identity_id, event_time DESC);
+COMMENT ON INDEX osm_lifecycle_by_identity IS
+  'Recent events per identity';

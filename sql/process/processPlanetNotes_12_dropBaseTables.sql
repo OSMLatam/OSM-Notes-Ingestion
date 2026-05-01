@@ -1,7 +1,7 @@
 -- Drop base tables and ingestion/monitor auxiliary objects.
 --
 -- Author: Andres Gomez (AngocA)
--- Version: 2026-04-17
+-- Version: 2026-04-22
 
 -- Set statement timeout to 30 seconds for DROP operations
 SET statement_timeout = '30s';
@@ -27,6 +27,10 @@ DROP TABLE IF EXISTS logs CASCADE;
 DROP TABLE IF EXISTS note_comments_text CASCADE;
 DROP TABLE IF EXISTS note_comments CASCADE;
 DROP TABLE IF EXISTS notes CASCADE;
+DROP TABLE IF EXISTS osm_identity_suggestion CASCADE;
+DROP TABLE IF EXISTS osm_identity_lifecycle_event CASCADE;
+DROP TABLE IF EXISTS osm_user_id_link CASCADE;
+DROP TABLE IF EXISTS osm_user_identity CASCADE;
 DROP TABLE IF EXISTS users CASCADE;
 
 -- Schema contract and user-identity tables (created in

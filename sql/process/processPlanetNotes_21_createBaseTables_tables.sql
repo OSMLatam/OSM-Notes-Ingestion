@@ -1,7 +1,7 @@
 -- Create base tables and some indexes.
 --
 -- Author: Andres Gomez (AngocA)
--- Version: 2026-04-19
+-- Version: 2026-04-23
 
 CREATE TABLE IF NOT EXISTS users (
  user_id INTEGER NOT NULL PRIMARY KEY,
@@ -62,6 +62,142 @@ COMMENT ON COLUMN user_identity_conflicts.times_seen IS
   'How many times this same collision was detected';
 COMMENT ON COLUMN user_identity_conflicts.status IS
   'Review status for operational follow-up';
+
+-- Durable user identity: stable identity_id can span several OSM user_id values
+-- (account changes). Ingestion owns these tables; API/Analytics may read.
+--
+-- Author: Andres Gomez (AngocA)
+-- Version: 2026-04-23
+CREATE TABLE IF NOT EXISTS osm_user_identity (
+ identity_id UUID NOT NULL
+  DEFAULT gen_random_uuid(),
+ created_at TIMESTAMPTZ NOT NULL
+  DEFAULT CURRENT_TIMESTAMP,
+ CONSTRAINT pk_osm_user_identity PRIMARY KEY (identity_id)
+);
+COMMENT ON TABLE osm_user_identity IS
+  'Logical person identity independent of a single OSM user_id';
+COMMENT ON COLUMN osm_user_identity.identity_id IS
+  'Surrogate id for a logical contributor';
+COMMENT ON COLUMN osm_user_identity.created_at IS
+  'Time this identity row was created';
+
+CREATE TABLE IF NOT EXISTS osm_user_id_link (
+ id BIGSERIAL,
+ identity_id UUID NOT NULL
+  CONSTRAINT fk_osm_user_id_link_identity
+  REFERENCES osm_user_identity (identity_id)
+  ON DELETE CASCADE,
+ user_id INTEGER NOT NULL
+  CONSTRAINT fk_osm_user_id_link_user
+  REFERENCES users (user_id)
+  ON DELETE RESTRICT,
+ valid_from TIMESTAMPTZ NOT NULL
+  DEFAULT CURRENT_TIMESTAMP,
+ valid_to TIMESTAMPTZ,
+ confidence VARCHAR(32) NOT NULL
+  DEFAULT 'certain'
+  CONSTRAINT osm_user_id_link_confidence_chk
+  CHECK (confidence IN (
+   'certain',
+   'inferred_username_change',
+   'inferred_recreation',
+   'manual',
+   'rejected'
+  )),
+ source_process VARCHAR(64) NOT NULL
+  DEFAULT 'ingestion',
+ first_observed_at TIMESTAMPTZ NOT NULL
+  DEFAULT CURRENT_TIMESTAMP,
+ last_observed_at TIMESTAMPTZ NOT NULL
+  DEFAULT CURRENT_TIMESTAMP,
+ CONSTRAINT pk_osm_user_id_link PRIMARY KEY (id)
+);
+COMMENT ON TABLE osm_user_id_link IS
+  'Binds an OSM user_id to a logical identity; valid_to set when link ends';
+COMMENT ON COLUMN osm_user_id_link.confidence IS
+  'certain: observed mapping; inferred_*: heuristics; manual: operator; rejected: invalid';
+COMMENT ON COLUMN osm_user_id_link.valid_to IS
+  'End of this link (NULL = current for this user_id)';
+
+CREATE TABLE IF NOT EXISTS osm_identity_lifecycle_event (
+ id BIGSERIAL,
+ identity_id UUID NOT NULL
+  CONSTRAINT fk_osm_lifecycle_identity
+  REFERENCES osm_user_identity (identity_id)
+  ON DELETE CASCADE,
+ event_type VARCHAR(64) NOT NULL
+  CONSTRAINT osm_lifecycle_event_type_chk
+  CHECK (event_type IN (
+   'created',
+   'user_id_link_opened',
+   'user_id_link_closed',
+   'suggestion_raised',
+   'manual_merge',
+   'manual_split',
+   'comment'
+  )),
+ event_time TIMESTAMPTZ NOT NULL
+  DEFAULT CURRENT_TIMESTAMP,
+ source_process VARCHAR(64),
+ details JSONB,
+ CONSTRAINT pk_osm_identity_lifecycle_event PRIMARY KEY (id)
+);
+COMMENT ON TABLE osm_identity_lifecycle_event IS
+  'Optional audit stream for identity changes';
+COMMENT ON COLUMN osm_identity_lifecycle_event.event_type IS
+  'Type of event for analytics or operator review';
+
+CREATE TABLE IF NOT EXISTS osm_identity_suggestion (
+ id BIGSERIAL,
+ identity_id_low UUID NOT NULL
+  CONSTRAINT fk_osm_suggestion_id_low
+  REFERENCES osm_user_identity (identity_id)
+  ON DELETE CASCADE,
+ identity_id_high UUID NOT NULL
+  CONSTRAINT fk_osm_suggestion_id_high
+  REFERENCES osm_user_identity (identity_id)
+  ON DELETE CASCADE,
+ username VARCHAR(256),
+ incoming_user_id INTEGER,
+ existing_user_id INTEGER,
+ reason VARCHAR(64) NOT NULL
+  CONSTRAINT osm_suggestion_reason_chk
+  CHECK (reason IN (
+   'username_reused_by_different_user_id',
+   'editorial',
+   'other'
+  )),
+ confidence VARCHAR(32) NOT NULL
+  CONSTRAINT osm_suggestion_confidence_chk
+  CHECK (confidence IN (
+   'high',
+   'medium',
+   'low',
+   'none'
+  )),
+ status VARCHAR(32) NOT NULL
+  DEFAULT 'open'
+  CONSTRAINT osm_suggestion_status_chk
+  CHECK (status IN (
+   'open',
+   'accepted',
+   'rejected',
+   'superseded'
+  )),
+ source_process VARCHAR(64) NOT NULL,
+ created_at TIMESTAMPTZ NOT NULL
+  DEFAULT CURRENT_TIMESTAMP,
+ last_seen_at TIMESTAMPTZ NOT NULL
+  DEFAULT CURRENT_TIMESTAMP,
+ CONSTRAINT pk_osm_identity_suggestion PRIMARY KEY (id),
+ CONSTRAINT osm_suggestion_order_chk
+  CHECK (identity_id_low < identity_id_high)
+);
+COMMENT ON TABLE osm_identity_suggestion IS
+  'Unconfirmed merge or relation hints; API should not treat as fact';
+COMMENT ON COLUMN osm_identity_suggestion.confidence IS
+  'low for username-based collisions; manual review required';
 
 CREATE TABLE IF NOT EXISTS notes (
  note_id INTEGER NOT NULL, -- id
@@ -190,9 +326,10 @@ INSERT INTO properties (key, value) VALUES
   ('initialLoadComments', 'true');
 
 -- Set current schema contract version (SemVer).
+-- 1.2.0: Adds durable osm_user_identity, links, and suggestion tables.
 -- 1.1.0: Adds identity history/conflict entities without breaking old tables.
 INSERT INTO schema_version (component, version) VALUES
-  ('core', '1.1.0')
+  ('core', '1.2.0')
 ON CONFLICT (component) DO UPDATE
   SET version = EXCLUDED.version,
     updated_at = CURRENT_TIMESTAMP;
