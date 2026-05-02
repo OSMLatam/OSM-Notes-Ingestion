@@ -23,7 +23,8 @@ set -e
 set -o pipefail
 set -E
 
-declare LOG_LEVEL="${LOG_LEVEL:-ERROR}"
+declare LOG_LEVEL="${LOG_LEVEL:-INFO}"
+# Cron may set LOG_LEVEL=ERROR to suppress INFO; default INFO shows schema steps.
 # Narrow contract: countries + WMS layer only (see disputed_wms in
 # etc/schema_compatibility.sh). Use SCHEMA_CONSUMER=ingestion if you require 1.2.0+.
 declare SCHEMA_CONSUMER="${SCHEMA_CONSUMER:-disputed_wms}"
@@ -67,6 +68,7 @@ if [[ "${1:-}" == "-h" ]] || [[ "${1:-}" == "--help" ]]; then
  echo
  echo "JSON: ${DISPUTED_WMS_JSON}"
  echo "Optional: DISPUTED_WMS_JSON_OVERRIDE=/path/to.json for tests."
+ echo "Optional: LOG_LEVEL=ERROR for quiet cron (default INFO)."
  echo "Hardcoded geom: geometry_ewkt per entry (see JSON geometry_hints)."
  exit "${ERROR_HELP_MESSAGE:-1}"
 fi
