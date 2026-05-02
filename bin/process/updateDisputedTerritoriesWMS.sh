@@ -250,10 +250,11 @@ function __table_exists_public() {
 function __assert_table_exists() {
  local TBL="${1:?}"
  local HINT="${2:?}"
- local EXISTS_RC
- __table_exists_public "${TBL}"
- EXISTS_RC=$?
- if [[ "${EXISTS_RC}" -eq 0 ]]; then
+ # Under set -e, do not call __table_exists_public as a standalone command: its
+ # exit status is non-zero when the table is absent.
+ # Intentional: errexit must not fire on missing table.
+ # shellcheck disable=SC2310
+ if __table_exists_public "${TBL}"; then
   return 0
  fi
  __loge "ERROR: Table '${TBL}' does not exist. ${HINT}"
@@ -265,10 +266,9 @@ function __assert_table_exists() {
 # Parameters: none.
 ##
 function __ensure_disputed_wms_schema() {
- local EXISTS_RC
- __table_exists_public "disputed_territories_wms"
- EXISTS_RC=$?
- if [[ "${EXISTS_RC}" -eq 0 ]]; then
+ # Intentional: errexit must not fire before seed SQL.
+ # shellcheck disable=SC2310
+ if __table_exists_public "disputed_territories_wms"; then
   return 0
  fi
  __logi "Table disputed_territories_wms not found; applying create + seed (first run)"
