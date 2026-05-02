@@ -297,15 +297,21 @@ function __apply_schema_sql() {
 # Parameters: none.
 ##
 function __run_geometry_refresh() {
+ __log_start
  local GEN_SQL="${TMP_DIR}/${BASENAME}_geometry_updates.sql"
  __assert_schema_compatible
+ __logi "Proceeding with disputed_territories_wms setup and geometry refresh."
  __ensure_disputed_wms_schema
  __assert_table_exists "disputed_territories_wms" \
   "Schema apply failed or table was dropped; run ${BASENAME}.sh --init manually."
  __assert_table_exists "countries" \
   "Load boundaries with updateCountries.sh (e.g. --base on an empty database)."
 
- : > "${GEN_SQL}"
+ if ! : > "${GEN_SQL}" 2> /dev/null; then
+  __loge "ERROR: Cannot write temporary geometry SQL file: ${GEN_SQL}"
+  exit "${ERROR_GENERAL:-255}"
+ fi
+ __logi "Writing geometry UPDATE statements to ${GEN_SQL}"
  __write_geometry_updates_sql "${GEN_SQL}" "${DISPUTED_WMS_JSON}"
 
  __logi "Executing geometry updates (${GEN_SQL})"
@@ -364,9 +370,13 @@ function main() {
   __log_start
   __logi "Dry-run: geometry SQL only (no database)."
   local GEN_SQL="${TMP_DIR}/${BASENAME}_geometry_updates.sql"
-  : > "${GEN_SQL}"
+  if ! : > "${GEN_SQL}" 2> /dev/null; then
+   __loge "ERROR: Cannot write temporary geometry SQL file: ${GEN_SQL}"
+   exit "${ERROR_GENERAL:-255}"
+  fi
   __write_geometry_updates_sql "${GEN_SQL}" "${DISPUTED_WMS_JSON}"
   cat "${GEN_SQL}"
+  __log_finish
   exit 0
  fi
 
@@ -379,6 +389,7 @@ function main() {
  fi
 
  __run_geometry_refresh
+ __log_finish
 }
 
 main "$@"
