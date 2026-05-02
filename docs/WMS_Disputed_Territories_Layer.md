@@ -55,12 +55,13 @@ the repo’s source of truth as **`disputed_territories_wms_names.json`**.
 | `data/disputed_territories_wms_names.json` | Canonical names, descriptions, optional geometry hints |
 | `sql/wms/disputed_territories_wms_01_create_table.sql` | Enum + table + indexes |
 | `sql/wms/disputed_territories_wms_02_seed_reference_names.sql` | Seed rows (`geom` NULL until refresh) |
-| `sql/wms/disputed_territories_wms_99_drop_all.sql` | Drop table + enum (used by `cleanupAll.sh`) |
+| `sql/wms/disputed_territories_wms_03_create_view.sql` | `public.disputed_territories_wms_view` (`geom AS geometry`; GeoServer-friendly) |
+| `sql/wms/disputed_territories_wms_99_drop_all.sql` | Drop view + table + enum (used by `cleanupAll.sh`) |
 | `bin/process/updateDisputedTerritoriesWMS.sh` | Refresh `geom` from JSON + `countries` |
 
 ## Operations
 
-- **First deploy:** After **`countries`** exists, run **`bin/process/updateDisputedTerritoriesWMS.sh`**; it applies create + seed automatically if **`disputed_territories_wms`** is missing. **`--init`** optionally forces those SQL scripts every run (idempotent).
+- **First deploy:** After **`countries`** exists, run **`bin/process/updateDisputedTerritoriesWMS.sh`**; it applies create + seed automatically if **`disputed_territories_wms`** is missing, then ensures **`disputed_territories_wms_view`**. **`--init`** optionally forces create/seed SQL every run (idempotent).
 
 - **Periodic refresh:** After `updateCountries.sh` (same DB), so intersections use
   current boundaries. See `examples/crontab-setup.example`.

@@ -53,6 +53,7 @@ readonly DISPUTED_WMS_JSON
 declare -r SQL_WMS_DIR="${SCRIPT_BASE_DIRECTORY}/sql/wms"
 declare -r SQL_WMS_CREATE="${SQL_WMS_DIR}/disputed_territories_wms_01_create_table.sql"
 declare -r SQL_WMS_SEED="${SQL_WMS_DIR}/disputed_territories_wms_02_seed_reference_names.sql"
+declare -r SQL_WMS_VIEW="${SQL_WMS_DIR}/disputed_territories_wms_03_create_view.sql"
 
 if [[ "${1:-}" == "-h" ]] || [[ "${1:-}" == "--help" ]]; then
  # shellcheck disable=SC1091
@@ -293,6 +294,20 @@ function __apply_schema_sql() {
 }
 
 ##
+# Ensures public.disputed_territories_wms_view exists (for WMS feature types).
+# Parameters: none.
+##
+function __ensure_disputed_wms_public_view() {
+ if [[ ! -f "${SQL_WMS_VIEW}" ]]; then
+  __loge "ERROR: Missing SQL ${SQL_WMS_VIEW}"
+  exit "${ERROR_MISSING_LIBRARY:-241}"
+ fi
+ __logi "Applying ${SQL_WMS_VIEW}"
+ PGAPPNAME="${PGAPPNAME}" psql -U "${DB_USER}" -d "${DBNAME}" -v ON_ERROR_STOP=1 \
+  -f "${SQL_WMS_VIEW}"
+}
+
+##
 # Main refresh: generate SQL and execute against the database.
 # Parameters: none.
 ##
@@ -304,6 +319,7 @@ function __run_geometry_refresh() {
  __ensure_disputed_wms_schema
  __assert_table_exists "disputed_territories_wms" \
   "Schema apply failed or table was dropped; run ${BASENAME}.sh --init manually."
+ __ensure_disputed_wms_public_view
  __assert_table_exists "countries" \
   "Load boundaries with updateCountries.sh (e.g. --base on an empty database)."
 
