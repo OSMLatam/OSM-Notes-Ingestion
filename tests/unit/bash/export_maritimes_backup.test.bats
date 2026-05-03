@@ -3,7 +3,7 @@
 # Export Maritimes Backup Script Tests
 # Tests for bin/scripts/exportMaritimesBackup.sh
 # Author: Andres Gomez (AngocA)
-# Version: 2026-03-28
+# Version: 2026-05-03
 
 load "${BATS_TEST_DIRNAME}/../../test_helper"
 
@@ -45,7 +45,7 @@ teardown() {
  # Mock psql to simulate connection failure
  psql() {
   if [[ "$*" == *schema_version* ]]; then
-   echo "1.1.0"
+   echo "1.2.0"
    return 0
   fi
   if [[ "$1" == "-d" ]] && [[ "$2" == "test_db" ]] && [[ "$3" == "-c" ]]; then
@@ -64,7 +64,7 @@ teardown() {
  # Mock psql to return 0 countries
  psql() {
   if [[ "$*" == *schema_version* ]]; then
-   echo "1.1.0"
+   echo "1.2.0"
    return 0
   fi
   if [[ "$*" == *"SELECT COUNT(*) FROM countries"* ]]; then
@@ -84,7 +84,7 @@ teardown() {
  # Mock psql to return valid counts
  psql() {
   if [[ "$*" == *schema_version* ]]; then
-   echo "1.1.0"
+   echo "1.2.0"
    return 0
   fi
   # Connection check
@@ -171,7 +171,7 @@ EOF
  # Mock psql to return maritime count
  psql() {
   if [[ "$*" == *schema_version* ]]; then
-   echo "1.1.0"
+   echo "1.2.0"
    return 0
   fi
   # Connection check
@@ -234,7 +234,7 @@ EOF
  # Mock psql to return 0 maritimes
  psql() {
   if [[ "$*" == *schema_version* ]]; then
-   echo "1.1.0"
+   echo "1.2.0"
    return 0
   fi
   # Connection check

@@ -3,7 +3,7 @@
 # Generate Note Location Backup Script Tests
 # Tests for bin/scripts/generateNoteLocationBackup.sh
 # Author: Andres Gomez (AngocA)
-# Version: 2026-03-28
+# Version: 2026-05-03
 
 load "${BATS_TEST_DIRNAME}/../../test_helper"
 
@@ -46,7 +46,7 @@ teardown() {
  # Mock psql to simulate connection failure
  psql() {
   if [[ "$*" == *schema_version* ]]; then
-   echo "1.1.0"
+   echo "1.2.0"
    return 0
   fi
   if [[ "$1" == "-d" ]] && [[ "$2" == "test_db" ]] && [[ "$3" == "-c" ]]; then
@@ -65,7 +65,7 @@ teardown() {
  # Mock psql to return 0 notes with country
  psql() {
   if [[ "$*" == *schema_version* ]]; then
-   echo "1.1.0"
+   echo "1.2.0"
    return 0
   fi
   if [[ "$*" == *"SELECT COUNT(*) FROM notes WHERE id_country IS NOT NULL"* ]]; then
@@ -85,7 +85,7 @@ teardown() {
  # Mock psql to return valid counts and export data
  psql() {
   if [[ "$*" == *schema_version* ]]; then
-   echo "1.1.0"
+   echo "1.2.0"
    return 0
   fi
   if [[ "$*" == *"SELECT COUNT(*) FROM notes WHERE id_country IS NOT NULL"* ]]; then
@@ -126,7 +126,7 @@ teardown() {
  # Mock psql
  psql() {
   if [[ "$*" == *schema_version* ]]; then
-   echo "1.1.0"
+   echo "1.2.0"
    return 0
   fi
   if [[ "$*" == *"SELECT COUNT(*) FROM notes WHERE id_country IS NOT NULL"* ]]; then
@@ -165,7 +165,7 @@ teardown() {
  # Mock psql
  psql() {
   if [[ "$*" == *schema_version* ]]; then
-   echo "1.1.0"
+   echo "1.2.0"
    return 0
   fi
   if [[ "$*" == *"SELECT COUNT(*) FROM notes WHERE id_country IS NOT NULL"* ]]; then
@@ -205,7 +205,7 @@ teardown() {
  # Mock psql to return max note_id
  psql() {
   if [[ "$*" == *schema_version* ]]; then
-   echo "1.1.0"
+   echo "1.2.0"
    return 0
   fi
   if [[ "$*" == *"SELECT COUNT(*) FROM notes WHERE id_country IS NOT NULL"* ]]; then

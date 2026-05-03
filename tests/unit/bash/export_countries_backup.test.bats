@@ -3,7 +3,7 @@
 # Export Countries Backup Script Tests
 # Tests for bin/scripts/exportCountriesBackup.sh
 # Author: Andres Gomez (AngocA)
-# Version: 2026-03-28
+# Version: 2026-05-03
 
 load "${BATS_TEST_DIRNAME}/../../test_helper"
 
@@ -44,9 +44,10 @@ teardown() {
 @test "exportCountriesBackup.sh should check database connection" {
  # Mock psql to simulate connection failure
  psql() {
-  # __assert_schema_compatible queries schema_version before other logic.
+  # __assert_schema_compatible queries schema_version before other logic
+ # (ingestion contract: core >= 1.2.0).
   if [[ "$*" == *schema_version* ]]; then
-   echo "1.1.0"
+   echo "1.2.0"
    return 0
   fi
   # Check if this is the connection test query
@@ -66,7 +67,7 @@ teardown() {
  # Mock psql to return 0 countries
  psql() {
   if [[ "$*" == *schema_version* ]]; then
-   echo "1.1.0"
+   echo "1.2.0"
    return 0
   fi
   # Connection check should succeed
@@ -91,7 +92,7 @@ teardown() {
  # Mock psql to return valid count
  psql() {
   if [[ "$*" == *schema_version* ]]; then
-   echo "1.1.0"
+   echo "1.2.0"
    return 0
   fi
   # Connection check
@@ -178,7 +179,7 @@ EOF
  # Mock psql to return counts
  psql() {
   if [[ "$*" == *schema_version* ]]; then
-   echo "1.1.0"
+   echo "1.2.0"
    return 0
   fi
   # Connection check
@@ -244,7 +245,7 @@ EOF
  # Mock psql
  psql() {
   if [[ "$*" == *schema_version* ]]; then
-   echo "1.1.0"
+   echo "1.2.0"
    return 0
   fi
   # Connection check
